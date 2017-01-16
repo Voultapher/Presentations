@@ -1,57 +1,86 @@
 # The Situation
+Note:
+- The Situation >>
 ---
-C: You want to give the user the option of customizing what your program does
-Example std::sort
-```
+```cpp
 void sort(range, comp_func)
 ```
-templates allow for an elegant **ZOA** solution
-C: **ZOA** Zero overhead abstraction
-```
+templates allow for an elegant ZOA solution
+<!-- .element: class="fragment" -->
+```cpp
 template<typename Func> void sort(range, Func comp_func)
 ```
+<!-- .element: class="fragment" -->
+Note:
+- You want to give the user the option of customizing what your program does.
+- Example std::sort >>
+- ZOA Zero overhead abstraction >> >>
 ---
 But what if want to implement something like a task queue?
-```
+```cpp
 template<typename Func> std::vector<Func> queue;
 ```
-C:This works, however the user can only provide one kind of function type.
+<!-- .element: class="fragment" -->
+Note:
+- But what if want to implement something like a task queue? >>
+- This works, however the user can only provide one kind of function type. >>
 ---
-C: More than one type you say?
 `std::tuple`
-C: If you know at compile time how many function objects you'll have,
-then `std::tuple` can be a **ZOA**
+<!-- .element: class="fragment" -->
+Note:
+- More than one type you say? >>
+- If you know at compile time how many function objects you'll have,
+then `std::tuple` can be a **ZOA** >>
 ---
 Enter `std::function`, the *magic* solution.
+<!-- .element: class="fragment" -->
+Note:
+- Enter `std::function`, the -> *magic* solution. >>
 ---
 So how do you implement *magic*?
+
 Image of dead unicorn
-C: Aparantly it involves the blood of a dead unicorn
-and the tortured soul of a library vendor
+<!-- .element: class="fragment" -->
+Note:
+- So how do you implement *magic*? >>
+- Aparantly it involves the blood of a dead unicorn
+and the tortured soul of a library vendor >>
 ---
 Image of burst bubble.
-C: Sorry to inform you :( There is no *magic*.
-As you'll find mentioned in every stackoverflow answer about this topic.
-The price for *magic* is runtime. No more **ZOA**
+Note:
+- Sorry to inform you :( There is no *magic*.
+- As you'll find mentioned in every stackoverflow answer about this topic.
+The price for *magic* is runtime. std::function is not a **ZOA** >>
 ---
-# Maybe it's a bad pattern?
-C: Maybe you should avoid situations where you don't know the type at compile time
+## Maybe it's a bad pattern?
+Note:
+- Maybe you should avoid situations,
+where you don't know the type at compile time >>
 ---
-# **C++** you only pay for what you use
+# **C++**
+### you only pay for what you use
+<!-- .element: class="fragment" -->
+Note:
+- One of C++'s core principles. >>
+- You only pay for what you use >>
 ---
-C: Ok, before we dive deeper into the topic,
-C: lets talk about some concepts.
-C: Oh yea, if you have questions, just raise your arm.
-### closure
-C: A callable thing, that may contain state
-C: most common example
-```
+# closure
+<!-- .element: class="fragment" -->
+Note:
+- Ok, before we dive deeper into the topic,
+lets talk about some concepts.
+- Oh yea, if you have questions, just raise your arm. >>
+- A callable thing, that may contain state.
+- Most common example. >>
+---
+```cpp
 int val = 3;
 auto lam = [val](int arg) -> int { return arg + val; };
 ```
-C: Lambdas. This is not a new concept,
-back before C++11, people had ways of expressing the same
-```
+Note:
+- Lambdas! >>
+---
+```cpp
 struct closure
 {
     int val;
@@ -62,132 +91,226 @@ struct closure
         return arg + val;
     }
 };
+
 int val = 3;
 closure old{ val };
 ```
-C: It's just less pretty
+<!-- .element: class="fragment" -->
+Note:
+- This is not a new concept.
+- Back before C++11, people had ways of expressing the same. >>
+- It's just less pretty and more error prone >>
 ---
-C: During the talk, we'll play a game, where I show a small code snippet
-and you tell what it prints
-Let's give it a quick try
-```
+```cpp
 for (int i = 1; i <= 10; ++i)
     std::cout << i << '\n';
 ```
-C: I'm amazed to have such a qulified audience
+<!-- .element: class="fragment" -->
+Note:
+- During the talk, we'll play a game, where I show a small code snippet
+and if it contains a cout, you tell me what it prints
+- Let's give it a quick try >>
+- I'm amazed to have such a qulified audience >>
 ---
-### Size of callable *things*
+## Size of callable *things*
+Note:
+- Size of callable *things* >>
+---
 Function pointers
-C: Let's start with function pointers
-```
+```cpp
 void foo(int arg);
-auto f = foo;
-std::cout << sizeof(f);
+
+void bar()
+{
+    auto f = foo;
+    std::cout << sizeof(f);
+}
 ```
-C: On most platforms it's the size of a pointer, so 8 or 4 byte respectively
+8 or 4 byte
+<!-- .element: class="fragment" -->
+Note:
+- Let's start with function pointers >>
+- On most platforms it's the size of a pointer, so 8 or 4 byte respectively >>
 ---
 Lambdas
-C: And here?
-```
+```cpp
 auto f = [](char arg) {};
 std::cout << sizeof(f);
 ```
-C: 1 byte, so we already see a diference
-```
+1 byte
+<!-- .element: class="fragment" -->
+```cpp
 int val = 3;
 auto f = [val](int arg) {};
 std::cout << sizeof(f);
 ```
-C: This time it's sizeof(int), usually 4 byte
-```
+sizeof(int) bytes
+<!-- .element: class="fragment" -->
+```cpp
 auto f = [](char arg[10]) {};
 std::cout << sizeof(f);
 ```
-C: 1 byte.
-C: The size of a closure depends soly on the size of what is captured
+1 byte
+<!-- .element: class="fragment" -->
+Note:
+- Let's continue with lambdas >>
+- 1 byte, so we already see a diference >>
+- This time it's sizeof(int), usually 4 byte >>
+- Again, 1 byte.
+- The size of a closure depends soly on the size of what it captures >>
 ---
-### Function pointer types
-```
+## Function pointer types
+Note:
+- Let's clear up some of the, at least for me more arcane syntax,
+around function pointers >>
+---
+```cpp
 void foo(int arg);
 auto f = foo;
 ```
-C: You guessed it, it's:
-```
+```cpp
 decltype(f) == void(*)(int);
 ```
+<!-- .element: class="fragment" -->
+Note:
+- You guessed it, it's: >>
+- Still fairly reasonable >>
 ---
-C: How about member functions
-```
+### Member function pointers
+```cpp
 class foo
 {
     void bar(int arg);
 };
+
 auto f = &foo::bar;
 ```
-C: You guessed it, this is invalid, bar is private
-```
+<!-- .element: class="fragment" -->
+Note:
+- How about member functions >>
+- You guessed it, this is invalid, bar is private >>
+---
+```cpp
 class foo
 {
 public:
     void bar(int arg);
 };
+
 auto f = &foo::bar;
 ```
-C: so what's the type of f?
-```
+```cpp
 decltype(f) == void(foo::* bar)(int)
 ```
-C: now how about calling f?
-```
+<!-- .element: class="fragment" -->
+```cpp
 f(3);
 ```
-C: Nope
-```
+<!-- .element: class="fragment" -->
+```cpp
 foo obj;
 (obj.*f)(3);
 ```
+<!-- .element: class="fragment" -->
+Note:
+- So what's the type of f? >>
+- Now how about calling f? >>
+- Nope >>
+- It makes sense, that calling non static member functions,
+need some way of accessing the current state of the object >>
 ---
-```
+```cpp
 auto f = [](int arg) {};
 ```
-C: You guessed right, this was a trick question. Every lambda has a unique type
-```
+```cpp
 decltype(f) == decltype(f)
 ```
+<!-- .element: class="fragment" -->
+Note:
+- So, how about this? >>
+- You guessed right, this was a trick question.
+- Every lambda has a unique type >>
 ---
 # Alternatives
+Note:
+- Maybe we don't need magic. >>
 ---
-### Coroutines
-C: // copy basics from blog post
+# Coroutines
+Note:
+- For those unfamiliar with it, coroutines are a current **TS**
+- With them you can suspend and resume functions
 ---
-C: Let's benchmark it
-D: Switch to visual studio, and run benchmark
-C: Why? Coroutines internally use type erasure, again we have to store the state
-C somwhere, however this time we are storing both closure state and the
-function state
----
-C: not all hope is lost, we still have arguably the best C++ feature left
+### The Basics
+```cpp
+void foo() {}
 ```
+```cpp
+coro_return_type<int> test()
+{
+	co_await coro_awaitable_type{};
+}
+```
+<!-- .element: class="fragment" -->
+Note:
+- This is a subroutine >>
+- That is a coroutine >>
+---
+```cpp
+util::coro_task task_;
+
+template<typename F> explicit delegate(F&& func)
+{
+    task_ = [](auto func) -> util::coro_task
+    	{
+    		co_await std::experimental::suspend_always{};
+    		func();
+    	}(std::forward<F>(func))
+    );
+}
+
+```
+Note:
+- A simplified version with just the important parts,
+- The idea is that we store a coroutine_handle which points to
+a suspended function, which once resumed will call our function. >>
+---
+## That's it?
+Note:
+- Let's benchmark it
+D: Switch to visual studio, and run benchmark
+
+- That didn't work out :|. Why? Coroutines internally use type erasure,
+again we have to store the state somewhere,
+however this time we are storing both the closure and the function state
+---
+## Function pointers
+<!-- .element: class="fragment" -->
+```cpp
 int foo() { return 3; }
 
 void bar()
 {
     int(*f)() = foo;
-    std::cout << (***********/*INLINE COMMENTS YAY*/************f)();
+    std::cout << (**********/*INLINE COMMENTS YAY*/***********f)();
 }
 ```
-**Function pointers**
-C: If you are confused by what you are looking at,
-C: watch James McNeills great lightning talk from this years MeetingC++
+<!-- .element: class="fragment" -->
+Note:
+- Not all hope is lost, we still have arguably the best C++ feature left >> >>
+- Yes that's valid C++. What does it print?
+- If you are confused by what you are looking at,
+- watch James McNeills great lightning talk from this years MeetingC++
 ---
-C: on a more serious note, we'll see that they can be very usefull
-```
+```cpp
 void(*f)(int) = [](int arg) { std::cout << arg; };
 f(3);
 ```
-Lambdas are convertible to function pointers
+<!-- .element: class="fragment" -->
+Note:
+- On a more serious note, we'll see that they can be very usefull >>
+- Lambdas are convertible to function pointers >>
 ---
-C: problem solved
+
 ```
 class delegate
 {
@@ -203,12 +326,19 @@ public:
 private:
     invoke_ptr_t invoke_ptr_;
 };
-
+```
+Note:
+- A very basic delegate implementation using function pointers >>
+---
+```cpp
 delegate del{ [](int arg) { std::cout << arg; } };
 del(3);
 ```
+Note:
+- It's your time agian >>
 ---
-C: With the help of templates we can make it generic
+Note:
+- With the help of templates we can make it generic
 D: show in godbolt
 ```
 template<typename T> class delegate; // unspecified
@@ -235,30 +365,44 @@ void foo()
 }
 ```
 ---
-C: We are done right? Although there is one small problem. Anyone an idea?
-```
+```cpp
 int arr[10];
 arr[0] = 2;
-delegate<void(int)> del{ [arr](int arg) { std::cout << arg + arr[0]; } };
+
+delegate<void(int)> del{
+    [arr](int arg)
+    { std::cout << arg + arr[0]; }
+};
+
 del(1);
 ```
+<!-- .element: class="fragment" -->
 Only captureless lambdas are convertible to function pointers
-C: There is a good reason for that, think back to the size of closures.
-C: sizeof(delegate) is the size of one function pointer,
-C: where should it store the closure state?
-C: The array is larger than the entire delegate class,
-C: there is literraly no way of stuffing the information in there
+<!-- .element: class="fragment" -->
+Note:
+- We are done right? Although there is one small problem. Anyone an idea? >>
+- That's invalid >>
+- There is a good reason for that, think back to the size of closures.
+- sizeof(delegate) is the size of one function pointer,
+where should it store the closure?
+- The array is larger than the entire delegate class,
+there is literraly no way of stuffing the information in there >>
 ---
-C: The solution is simple
-# Convert to functional programming
-C: Only use pure functions
+## Convert to functional programming
+<!-- .element: class="fragment" -->
+Note:
+- The solution is simple >>
+- Only use pure functions >>
 ---
-C: Maybe, there is a way constructing a function pointer with a capturing lambda
-C: The issue is, that we have to store the closure somewhere
-C: Enter the C++'s least ambigious keyword
 # static
+<!-- .element: class="fragment" -->
+Note:
+- Maybe, there is a way of constructing a function pointer
+with a capturing lambda.
+- The issue is, that we have to store the closure somewhere
+- Enter C++'s least ambigious keyword >> >>
 ---
-```
+```cpp
 static int val = 4;
 auto pure = [](int arg)
 {
@@ -266,14 +410,17 @@ auto pure = [](int arg)
 };
 std::cout << pure(-1);
 ```
-C: pure lambdas aren't that pure after all,
-C: this works because the compiler can resolve the address of val at compile time
-C: now we can do
-```
+```cpp
 int(*f)(int) = pure;
 ```
+<!-- .element: class="fragment" -->
+Note:
+- Pure lambdas aren't that pure after all, this works because
+the compiler can resolve the address of val at compile time
+- Now we can do >>
 ---
-C: With that we can add a new constructor to delegate
+Note:
+- With that we can add a new constructor to delegate
 D: show on godbolt
 ```
 template<typename T> class delegate; // unspecified
@@ -311,18 +458,22 @@ void test()
 }
 ```
 ---
-C: We are golden now, right? Someone see any issues?
-C: We havn't talked about copying and moving, but let's do that later
-C: We are doing inproper argument type forwarding:
-```
+```cpp
+thread_local static T cap{ std::forward<T>(closure) };
+
 invoke_ptr_ = static_cast<invoke_ptr_t>([](Args... args) -> R
 {
     return cap(std::forward<Args>(args)...);
 });
 ```
-C: To avoid unnecessary moving, it should be
+Note:
+- We are golden now, right?
+- Someone see any issues?
+- We haven't talked about copying and moving, but let's do that later.
+- We are doing inproper argument type forwarding.
+- To avoid unnecessary moving, it should be >>
 ---
-```
+```cpp
 thread_local static T cap{ std::forward<T>(closure) };
 
 invoke_ptr_ = static_cast<invoke_ptr_t>([](Args&&... args) -> R
@@ -330,38 +481,54 @@ invoke_ptr_ = static_cast<invoke_ptr_t>([](Args&&... args) -> R
     return cap(std::forward<Args>(args)...);
 });
 ```
-C: But that does not work as that would not fit the function pointer type
+Note:
+- We should be passing in the arguments as rvalue references.
+- But that does not work, as that would not fit the function pointer type. >>
 ---
-C: Lets look at this:
-```
+```cpp
 using del_t = delegate<int(void)>;
 
 std::vector<del_t> vec;
+
 for (int i = 0; i <= 3; ++i)
     vec.emplace_back([i]() { return i; });
 
 std::cout << vec.front()();
 ```
-C: You guessed it, again it prints 3
-Although each lambda has a unique type, here there is only **ONE**
-lambda, which means that
-```
+<!-- .element: class="fragment" -->
+```cpp
 thread_local static T cap{ std::forward<T>(closure) };
 ```
-C: gets created only once, the first time this constructor is called
+<!-- .element: class="fragment" -->
+Note:
+- Let's look at this >>
+- You guessed it, again it prints 3
+- Although each lambda has a unique type, here there is only **ONE**
+lambda, which means that, >>
+- gets created only once, the first time this constructor is called.
 ---
-C: Sure we could tell the user to never do that.
-C: However this would result in an interface that is:
 Easy to use correctly
+<!-- .element: class="fragment" -->
+
 Easy to use incorrectly
-C: When truely what we want is:
+<!-- .element: class="fragment" -->
+Note:
+- Sure we could tell the user to never do that.
+- However this would result in an interface that is
+- Easy to use correctly >> and >> Easy to use incorrectly
+- When truely what we want is >>
 ---
 Easy to use correctly
+
 Hard to use incorrectly
+<!-- .element: class="fragment" -->
+Note:
+- Easy to use correctly >> and >> Hard to use incorrectly
 ---
-# How about we store the closure inplace
+## How about we store the closure inplace
+Note:
+- We could just store the closure inside the delegate object. >>
 ---
-C: now what should the local varible type be?
 ```
 template<typename R, typename... Args> class delegate<R(Args...)>
 {
@@ -370,73 +537,72 @@ public:
     using storage_t = ???
 }
 ```
-C: The type of the closure does only become visible in the constructor,
-C: as far as I know there is no way of making that type visible to other parts
-C: of the class.
-C: It seems we may have to resort to the dark art of type less storage
+<!-- .element: class="fragment" -->
+Note:
+- Now what should the local varible type be? >>
+- The type of the closure does only become visible in the constructor,
+as far as I know there is no way of making that type visible to other parts
+of the class.
+- It seems we may have to resort to the dark art of type less storage >>
 ---
-```
-std::aligned_storage
-```
+`void*`
+<!-- .element: class="fragment" -->
+Note:
+- The type less storage type most of you know is >>
+- But we want to avoid heap allocation.
+- As luck would have it, even here the deep pockets of C++11 got us covered >>
 ---
-C: it is a byte array, with limited size and alignment
-´´´
-void foo()
+`std::aligned_storage`
+Note:
+- It is a byte array, with limited size and alignment >>
+---
+```cpp
 {
 	std::aligned_storage<sizeof(int), alignof(int)> storage;
 	new(&storage)int{ 3 };
 
 	std::cout << reinterpret_cast<int&>(storage);
 }
-
-void bar()
-{
-	foo();
-	std::cout << 6;
-}
-´´´
-C: So what does this print?
+std::cout << 6;
+```
+Note:
+- So what does this print?
 ---
 # UB
+Note:
+- Hmm.. >>
 ---
-C: Yes it prints 3,
-and then it corrupts the stack trying to leave foo()
-C: Who can spot the bug?
-```
-void foo()
+```cpp
 {
 	std::aligned_storage<sizeof(int), alignof(int)> storage;
 	new(&storage)int{ 3 };
 
 	std::cout << reinterpret_cast<int&>(storage);
 }
-
-void bar()
-{
-	foo();
-	std::cout << 6;
-}
+std::cout << 6;
 ```
+Note:
+- Yes it prints 3, and then it corrupts the stack trying to leave
+the inner scope.
+- Who can spot the bug? >>
 ---
-```
-void foo()
+```cpp
 {
 	std::aligned_storage<sizeof(int), alignof(int)>::type storage;
 	new(&storage)int{ 3 };
 
 	std::cout << reinterpret_cast<int&>(storage);
 }
-
-void bar()
-{
-	foo();
-	std::cout << 6;
-}
+std::cout << 6;
 ```
-C: There was ::type missing, by writing into storage, which essentally was an empty
-struct, we corrupted the stack
+Note:
+- We forgot a ::type at the end of aligned_storage.
+- Trust me you don't want to debug, that.
+- By writing into storage, which essentally was an empty
+struct, we corrupted the stack >>
 ---
-C: With that we can change delegate to:
+Note:
+- With that we can change delegate to:
 D: show on godbolt
 ```
 template<typename T> class delegate; // unspecified
@@ -474,12 +640,12 @@ void test()
 	del();
 }
 ```
-C: So, now we successfully stored the closure, but how do we get it back out?
-C: Again we have no way of making the type visible to the rest of the class,
-C: operator() invokes the function pointer
-C: So how about we change the function pointer type
+- So, now we successfully stored the closure, but how do we get it back out?
+- Again we have no way of making the type visible to the rest of the class,
+- operator() invokes the function pointer.
+- So how about we change the function pointer type? >>
 ---
-```
+```cpp
 template<typename T> explicit delegate(T&& closure)
 {
 	new(&storage_)T{ std::forward<T>(closure) };
@@ -487,15 +653,20 @@ template<typename T> explicit delegate(T&& closure)
 	invoke_ptr_ = static_cast<invoke_ptr_t>(
 		[](storage_t& storage, Args&&... args) -> R
 	{
-		return reinterpret_cast<T&>(storage)(std::forward<Args>(args)...);
+		return reinterpret_cast<T&>(storage)(
+            std::forward<Args>(args)...
+        );
 	});
 }
 ```
-C: This works because inside a lambda all current types are visible
-C: Note the change to rvalue references for the arguments.
-C: That solves our forwarding issue.
+Note:
+- I'll give a minute to look at it.
+- This works because inside a lambda all current types are visible
+- Note the change to the function signature.
+- That solves our forwarding issue.
 ---
-C: So our entire class now looks like this
+Note:
+- So our entire class now looks like this
 D: show on godbolt
 ```
 template<typename T> class delegate; // unspecified
@@ -536,44 +707,54 @@ void test()
 	delegate<void()> del{ [val]() { std::cout << val; } };
 	del();
 }
+- Words >>
 ```
 ---
-C: However, this is no longer a **ZOA**
 # ~~ZOA~~
-C: If we construct it with a pure function, we'll pay none the less
+Note:
+- However, this is no longer a **ZOA**
+- If we construct it with a pure function, we'll pay none the less >>
 ---
-C: How about we split interface and implementation
-C: Let's create one implementation per use case
-One implementation per use case
+How about we split interface and implementation
+<!-- .element: class="fragment" -->
 * pure
+<!-- .element: class="fragment" -->
 * inplace_triv
+<!-- .element: class="fragment" -->
 * inplace
+<!-- .element: class="fragment" -->
 * dynamic
-C: pure, only works with pure functions,
-C: inplace_triv stores the closure inplace,
-C: only works with trivailly constructable and destructable types.
-C: More on why we should make that seperation, later.
-C: inplace stores the closure inplace.
-C: dynamic stores the closure on the heap
+<!-- .element: class="fragment" -->
+Note:
+- Let's create one implementation per use case. >>
+- pure, only works with pure functions. >>
+- inplace_triv stores the closure inplace,
+only works with trivailly constructable and destructable types. >>
+- inplace stores the closure inplace.
+- dynamic stores the closure on the heap.
+- More on why we should make that seperation, later. >>
 ---
-C: Both pure and inplace_triv have default copy, move and destruction.
-C: With inplace it gets a bit more tricky, we cannot just copy the storage
-C: object byte for byte. So agian, same issue how do we get the type out of
-C: storage in those operations.
-C: let's first look at the destruction
-```
+```cpp
 ~inplace()
 {
 	// call closure destructor
 }
 ```
+Note:
+- Both pure and inplace_triv have default copy, move and destruction.
+- With inplace it gets a bit more tricky, we cannot just copy the storage
+object byte for byte.
+- Agian, same issue, how do we get the closure out of
+storage in those operations?
+- Let's first look at the destruction. >>
 ---
-C: The answer is obviously
 # MORE FUNCTION POINTERS
-C: Sadly that ain't no joke
+<!-- .element: class="fragment" -->
+Note:
+- The answer is obviously >>
+- Sadly, I'm not joking >>
 ---
-C: We'll store a second function pointer
-```
+```cpp
 template<typename T> explicit inplace(T&& closure)
 {
     // ... same as before
@@ -584,15 +765,20 @@ template<typename T> explicit inplace(T&& closure)
 	);
 }
 ```
+Note:
+- We'll store a second function pointer >>
 ---
-C: Now we can do
+```cpp
 ~inplace()
 {
 	destructor_ptr_(storage_);
 }
----
-C: Similar story for the copy operations
 ```
+<!-- .element: class="fragment" -->
+Note:
+- Now we can do. >>
+---
+```cpp
 template<typename T> explicit inplace(T&& closure)
 {
     // ... same as before
@@ -600,10 +786,12 @@ template<typename T> explicit inplace(T&& closure)
     copy_ptr_ = copy_op<T, storage_t>();
 }
 ```
-C: So why put another layer of indirection in there?
+<!-- .element: class="fragment" -->
+Note:
+- Similar story for the copy operations >>
+- So why put another layer of indirection in there?
 ---
-C: Let's look at the implementation of copy_op
-```
+```cpp
 template<
     typename T,
     typename S,
@@ -618,11 +806,13 @@ template<
     };
 }
 ```
-C: It's fairly straight forward, we write into the local storage object,
-C: the closure that is currently stored in the source object
-C: But why the enable_if? Let's look a the other overload
+Note:
+- Let's look at the implementation of copy_op. >>
+- It's fairly straight forward, we write into the local storage object,
+the closure that is currently stored in the source object.
+- But why the enable_if? Let's look a the other overload >>
 ---
-```
+```cpp
 template<
     typename T,
     typename S,
@@ -635,21 +825,23 @@ template<
         "constructing delegate with move only type is invalid!");
 }
 ```
-C: As you can see, it is just a dummy function tha'll fail on instanciation.
-C: Why can't we build a delegate with move only types?
+Note:
+- As you can see, it is just a dummy function tha'll fail on instanciation.
+- Why can't we build a delegate with move only types? >>
 ---
-C: Consider this example
-```
+```cpp
 del_t del_a = rand_bool ? copy_move_closure{} : move_only_closure{};
 
 del_t del_b = del_a; // can we copy?
 ```
-C: We would have to make decisions at compile time about run time properties.
-C: I see 2 possible solutions if you *really* want move only delegates.
-C: You could make a move only delegate, or have a throwing copy.
+<!-- .element: class="fragment" -->
+Note:
+- Consider this example >>
+- We would have to make decisions at compile time about run time properties.
+- I see 2 possible solutions if you *really* want move only delegates.
+- You could either make a move only delegate, or have a throwing copy. >>
 ---
-C: The copy constructor is fairly straight forward
-```
+```cpp
 inplace(const inplace& other) :
     invoke_ptr_{ other.invoke_ptr_ },
     copy_ptr_{ other.copy_ptr_ },
@@ -658,9 +850,11 @@ inplace(const inplace& other) :
     copy_ptr_(storage_, other.storage_);
 }
 ```
-C: Note, we have to use the new copy pointer
+<!-- .element: class="fragment" -->
+Note:
+- The copy constructor is fairly straight forward >>
+- Note, we have to use the new copy pointer >>
 ---
-C: The copy assignment is similar
 ```
 inplace& operator= (const inplace& other)
 {
@@ -676,20 +870,23 @@ inplace& operator= (const inplace& other)
     return *this;
 }
 ```
-C: Notic, this time we have to destroy our closure we before copying
+<!-- .element: class="fragment" -->
+Note:
+- The copy assignment is similar >>
+- Notice, this time we have to destroy our closure before copying >>
 ---
-C: in order to stay close to std::function's api,
-C: the calling operator should be marked const
-```
+```cpp
 R operator() (Args&&... args) const
 {
     return invoke_ptr_(storage_, std::forward<Args>(args)...);
 }
 ```
+<!-- .element: class="fragment" -->
+Note:
+- In order to stay close to std::function's api,
+the calling operator should be marked const. >> >>
 ---
-C: Still, we could be modifying storage,
-C: so we have to mark storage as mutable
-```
+```cpp
 private:
 	mutable storage_t storage_;
 
@@ -697,76 +894,95 @@ private:
 	copy_ptr_t copy_ptr_;
 	destructor_ptr_t destructor_ptr_;
 ```
+<!-- .element: class="fragment" -->
+Note:
+- Still, we could be modifying storage,
+so we have to mark storage as mutable. >> >>
 ---
 # Designing the interface
 ---
 Why did we even split interface and implementation?
-C: Initially I didn't.
-C: There were multiple constructors and flags.
-C: After a while is was coplicated to keep track of all the posibilites,
-C: due to all the conditionality involved,
-C: depending on what it was constructed with.
+
 How do we bring it all together?
+<!-- .element: class="fragment" -->
+Note:
+- Initially I didn't.
+- There were multiple constructors and flags.
+- After a while is was coplicated to keep track of all the posibilites,
+due to all the conditionality involved,
+depending on what it was constructed with. >>
+- How do we bring it all together? >>
 ---
 # Variant
-C: A new C++17 feature, based on an old concept.
-C: It is basically an *or* rather than an *and* struct.
-C: I'll not go into to much detail here, if you want to know more,
-C: There is a good talk from this years cppcon called:
-C: "Variants: Past, Present, and Future" by David Sankel.
+Note:
+- A new C++17 feature, based on an old concept.
+- It is basically an *or* rather than an *and* struct.
+- I'll not go into to much detail here, if you want to know more,
+there is a good talk from this years cppcon called:
+"Variants: Past, Present, and Future" by David Sankel. >>
 ---
-C: Let's see it in action
+Note:
+- Let's see it in action
 D: Show on godbolt std::function version,
 D: then variant version,
 D: then show just calling pure
-C: Not only is it not **ZOA** anymore,
-C: its not even better than plain std::function.
+- Not only is it not **ZOA** anymore,
+- It's not even better than plain std::function. >>
 ---
-C: At that point I was somewhat hitting a wall.
 Was all that for nothing?
+<!-- .element: class="fragment" -->
+
 Is there just no better way of solving this problem?
-C: I was frustrated, it all looked so good,
-C: but again and again bugs forced me to abandon my previous solutions.
-C: After a couple of days, filled with the fruitless endevor of,
-C: saving a sunk ship, I finally relized:
-C: Yes there is no better way of solving this problem,
+<!-- .element: class="fragment" -->
+Note:
+- At that point I was somewhat hitting a wall.
+- I was frustrated, it all looked so good,
+but again and again bugs forced me to abandon my previous ideas. >>
+After a couple of days, filled with the fruitless endevor of,
+saving a sunken ship, I finally realized:
+- Yes there is no better way of solving this problem >>
 ---
 # I was trying to solve the wrong problem
+Note:
+- I was trying to solve the wrong problem >>
 ---
-C: What did we say earlier about C++? Right.
-# **C++** you only pay for what you use
-C: But we have no idea what the user will use.
-C: Let's make the user tell us what he wants.
-C: You tell us what you want, and that's what you'll get.
-C: No background magic trying to figure out what the user wants.
+# **C++**
+### you only pay for what you use
+<!-- .element: class="fragment" -->
+Note:
+- What did we say earlier about C++? Right. >>
+- you only pay for what you use.
+- But we have no idea what the user will use.
+- Let's make the user tell us what he wants.
+- You tell us what you want, and that's what you'll get.
+- No background magic trying to figure out what the user wants. >>
 ---
-C: Here is what it looks like
-```
+```cpp
 template<
 	typename T,
-	template<size_t, typename, typename...> class Spec = spec::inplace,
+	template<size_t, typename, typename...>class Spec = spec::inplace,
 	size_t size = detail::default_capacity
 >
 class delegate; // unspecified
 
 template<
 	typename R, typename... Args,
-	template<size_t, typename, typename...> class Spec,
+	template<size_t, typename, typename...>class Spec,
 	size_t size
 >
 class delegate<R(Args...), Spec, size>;
 ```
-C: We let the user decide what kind of limitations they want.
-C: And we even provide a default.
+<!-- .element: class="fragment" -->
+Note:
+- Here is what it looks like >>
+- We let the user decide what kind of limitations they want.
+- And we even provide a default. >>
 ---
 D: Show how it works on godbolt
+Note:
+- Words: >>
 ---
-C: I'd like a world where people are ok with no empty constructor,
-C: it results in cleaner code.
-C: However it seems people want empyt construction,
-C: and if called empty it should explode nicely.
-C: We could just add a boolean flag, empty.
-```
+```cpp
 R operator() (Args&&... args) const
 {
     if (empty)
@@ -775,12 +991,16 @@ R operator() (Args&&... args) const
     return invoke_ptr_(storage_, std::forward<Args>(args)...);
 }
 ```
-C: That's not nice. Maybe there is better way.
+<!-- .element: class="fragment" -->
+Note:
+- I'd like a world where people are ok with no empty constructor,
+it results in cleaner code.
+- However it seems people want empyt construction,
+and if called empty it should explode nicely.
+- We could just add a boolean flag, empty. >>
+- That's not nice. Maybe there is better way. >>
 ---
-What excatly are we building here?
-C: We are storing function objects, so why not store a thrwoing function?
-C: Said function
-```
+```cpp
 template<
 	typename R,
 	typename S,
@@ -790,9 +1010,14 @@ template<
 	throw std::bad_function_call();
 }
 ```
+<!-- .element: class="fragment" -->
+Note:
+- What excatly are we building here?
+- We are storing function objects, so why not store a thrwoing function?
+- Said function: >>
+- And the empty constructor >>
 ---
-C: And the empty constructor
-```
+```cpp
 explicit inplace() noexcept :
     invoke_ptr_{ empty_inplace<R, storage_t, Args...> },
     copy_ptr_{ copy_op<std::nullptr_t, storage_t>() },
@@ -801,47 +1026,50 @@ explicit inplace() noexcept :
     new(&storage_)std::nullptr_t{ nullptr };
 }
 ```
-C: That's all we have to change.
+Note:
+- That's all we have to change. >>
+- Making checking for emptyness equally simple. >>
 ---
-C: Making checking for emptyness equally simple.
-```
+```cpp
 bool empty() const noexcept
 {
 	return reinterpret_cast<std::nullptr_t&>(storage_) == nullptr;
 }
 ```
-C: That's it. Sure we glossed over a lot of details.
-C: None the less, those are all the important pieces you need.
+Note:
+- That's it. Sure we glossed over a lot of details.
+- None the less, those are all the important pieces you need. >>
 ---
 # Benchmarks
 Benchmark with and without small size optimization
 
 # Lessons learned
+Do not be afraid to challange a status quo!
 By seperating interface from implementation, you get more freedom and if one implementation
 works and the other does not. You know its not an interface issue.
 
 Test drived development
 
 ---
-C: Did you notice, we barely used any controll flow statements?
-C: In this entire 600 line, implementation there are only 2 ifs.
-C: The ones in the inplace copy and move assignments.
-C: That's it. No switch, no loops.
-C: Why is that?
+Note:Did you notice, we barely used any controll flow statements?
+Note:In this entire 600 line, implementation there are only 2 ifs.
+Note:The ones in the inplace copy and move assignments.
+Note:That's it. No switch, no loops.
+Note:Why is that?
 # Type oriented design
-C: Fundamentally, every program is some sort of data transformations.
-C: Take data, transform it and put it somewhere.
-C: Ask yourself, what is a type?
-C: At its core, a type describes a memory layout,
-C: so what is more ideal than a type, for describing data transformations?
+Note:Fundamentally, every program is some sort of data transformations.
+Note:Take data, transform it and put it somewhere.
+Note:Ask yourself, what is a type?
+Note:At its core, a type describes a memory layout,
+Note:so what is more ideal than a type, for describing data transformations?
 ---
 
 ---
 # Questions
-C: I'll start
+Note:I'll start
 ---
 How do you know it works?
-C: I don't. However, this may convince you.
+Note:I don't. However, this may convince you.
 D: Show IncludeOS server.
 
 ### Links:
@@ -851,5 +1079,5 @@ D: Show IncludeOS server.
 
 ---
 # Hiring?
-C: Shameless plug, if you are currently hiring,
+Note:Shameless plug, if you are currently hiring,
 feel free to talk to me. // better wording
