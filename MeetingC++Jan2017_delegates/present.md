@@ -340,32 +340,8 @@ Note:
 - It's your time again >>
 ---
 Note:
-- With the help of templates we can make it generic
-D: show in godbolt
-```
-template<typename T> class delegate; // unspecified
-
-template<typename R, typename... Args> class delegate<R(Args...)>
-{
-public:
-	using invoke_ptr_t = R(*)(Args...);
-
-	explicit delegate(invoke_ptr_t f) : invoke_ptr_(f) {}
-
-	R operator() (Args... args)
-	{
-		return invoke_ptr_(std::forward<Args>(args)...);
-	}
-private:
-	invoke_ptr_t invoke_ptr_;
-};
-
-void foo()
-{
-	delegate<void(int)> del{ [](int arg) { std::cout << arg; } };
-	del(3);
-}
-```
+- [With the help of templates we can make it generic](https://godbolt.org/g/CeRbBx)
+- Words >>
 ---
 ```cpp
 int arr[10];
@@ -422,43 +398,7 @@ the compiler can resolve the address of val at compile time
 - Now we can do >>
 ---
 Note:
-- With that we can add a new constructor to delegate
-D: show on godbolt
-```
-template<typename T> class delegate; // unspecified
-
-template<typename R, typename... Args> class delegate<R(Args...)>
-{
-public:
-	using invoke_ptr_t = R(*)(Args...);
-
-	explicit delegate(invoke_ptr_t f) : invoke_ptr_(f) {}
-
-	template<typename T> explicit delegate(T&& closure)
-	{
-		thread_local static T cap{ std::forward<T>(closure) };
-
-		invoke_ptr_ = static_cast<invoke_ptr_t>([](Args... args) -> R
-		{
-			return cap(std::forward<Args>(args)...);
-		});
-	}
-
-	R operator() (Args... args)
-	{
-		return invoke_ptr_(std::forward<Args>(args)...);
-	}
-private:
-	invoke_ptr_t invoke_ptr_;
-};
-
-void test()
-{
-	int val = 3;
-	delegate<void()> del{ [val]() { std::cout << val; } };
-	del();
-}
-```
+- [With that we can add a new constructor to delegate](https://godbolt.org/g/ygRvVg)
 ---
 ```cpp
 thread_local static T cap{ std::forward<T>(closure) };
@@ -605,44 +545,7 @@ Note:
 struct, we corrupted the stack >>
 ---
 Note:
-- With that we can change delegate to:
-D: show on godbolt
-```
-template<typename T> class delegate; // unspecified
-
-template<typename R, typename... Args> class delegate<R(Args...)>
-{
-public:
-	using invoke_ptr_t = R(*)(Args...);
-
-	using storage_t = std::aligned_storage<
-		sizeof(size_t) * 4,
-		sizeof(size_t)
-	>::type;
-
-	template<typename T> explicit delegate(T&& closure)
-	{
-		new(&storage_)T{ std::forward<T>(closure) };
-
-        //invoke_ptr_ = ???
-	}
-
-	R operator() (Args... args)
-	{
-		return invoke_ptr_(std::forward<Args>(args)...);
-	}
-private:
-	invoke_ptr_t invoke_ptr_;
-	storage_t storage_;
-};
-
-void test()
-{
-	int val = 3;
-	delegate<void()> del{ [val]() { std::cout << val; } };
-	del();
-}
-```
+- [With that we can change delegate to](https://godbolt.org/g/Ao4mWA)
 - So, now we successfully stored the closure, but how do we get it back out?
 - Again we have no way of making the type visible to the rest of the class,
 - operator() invokes the function pointer.
@@ -669,49 +572,8 @@ Note:
 - That solves our forwarding issue.
 ---
 Note:
-- So our entire class now looks like this
-D: show on godbolt
-```
-template<typename T> class delegate; // unspecified
-
-template<typename R, typename... Args> class delegate<R(Args...)>
-{
-public:
-	using storage_t = std::aligned_storage<
-		sizeof(size_t) * 4,
-		sizeof(size_t)
-	>::type;
-
-	using invoke_ptr_t = R(*)(storage_t&, Args&&...);
-
-	template<typename T> explicit delegate(T&& closure)
-	{
-		new(&storage_)T{ std::forward<T>(closure) };
-
-		invoke_ptr_ = static_cast<invoke_ptr_t>(
-			[](storage_t& storage, Args&&... args) -> R
-		{
-			return reinterpret_cast<T&>(storage)(std::forward<Args>(args)...);
-		});
-	}
-
-	R operator() (Args... args)
-	{
-		return invoke_ptr_(storage_, std::forward<Args>(args)...);
-	}
-private:
-	invoke_ptr_t invoke_ptr_;
-	storage_t storage_;
-};
-
-void test()
-{
-	int val = 3;
-	delegate<void()> del{ [val]() { std::cout << val; } };
-	del();
-}
+- [So our entire class now looks like this](https://godbolt.org/g/OpHfam)
 - Words >>
-```
 ---
 # ~~ZOA~~
 Note:
@@ -928,9 +790,10 @@ there is a good talk from this years cppcon called:
 ---
 Note:
 - Let's see it in action
-D: Show on godbolt std::function version,
-D: then variant version,
-D: then show just calling pure
+- [std::function version](https://godbolt.org/g/JNjmwA)
+- [variant version](https://gist.github.com/Voultapher/42964ed34db8e0b26d88f6f00a0db010)
+- maybe it's a bad implementation, let's try another
+- [when truely all we wanted is](https://godbolt.org/g/JC00ly)
 - Not only is it not a **ZOA** anymore,
 - It's not even better than plain std::function. >>
 ---
@@ -982,7 +845,7 @@ Note:
 - We let the user decide what kind of limitations they want.
 - And we even provide a default. >>
 ---
-D: Show how it works on godbolt
+[Let's take a look a the result](https://gist.github.com/Voultapher/2ee61395ea86c49d886465ceb8b0b214)
 Note:
 - Words: >>
 ---
