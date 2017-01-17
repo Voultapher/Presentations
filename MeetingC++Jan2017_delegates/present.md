@@ -14,7 +14,7 @@ template<typename Func> void sort(range, Func comp_func)
 Note:
 - You want to give the user the option of customizing what your program does.
 - Example std::sort >>
-- ZOA Zero overhead abstraction >> >>
+- templates allow for an elegant Zero overhead abstraction solution >> >>
 ---
 But what if want to implement something like a task queue?
 ```cpp
@@ -29,8 +29,8 @@ Note:
 <!-- .element: class="fragment" -->
 Note:
 - More than one type you say? >>
-- If you know at compile time how many function objects you'll have,
-then `std::tuple` can be a **ZOA** >>
+- Sure, if you know at compile time how many function objects you'll have,
+then `tuple` can be a **ZOA** >>
 ---
 Enter `std::function`, the *magic* solution.
 <!-- .element: class="fragment" -->
@@ -38,15 +38,15 @@ Note:
 - Enter `std::function`, the -> *magic* solution. >>
 ---
 So how do you implement *magic*?
-
-Image of dead unicorn
-<!-- .element: class="fragment" -->
 Note:
 - So how do you implement *magic*? >>
+---
+![alt text](dead_unicorn.jpg)
+Note:
 - Aparantly it involves the blood of a dead unicorn
 and the tortured soul of a library vendor >>
 ---
-Image of burst bubble.
+![alt text](burst_bubble.jpg)
 Note:
 - Sorry to inform you :( There is no *magic*.
 - As you'll find mentioned in every stackoverflow answer about this topic.
@@ -70,6 +70,7 @@ Note:
 - Ok, before we dive deeper into the topic,
 lets talk about some concepts.
 - Oh yea, if you have questions, just raise your arm. >>
+- Closure.
 - A callable thing, that may contain state.
 - Most common example. >>
 ---
@@ -107,10 +108,10 @@ for (int i = 1; i <= 10; ++i)
 ```
 <!-- .element: class="fragment" -->
 Note:
-- During the talk, we'll play a game, where I show a small code snippet
-and if it contains a cout, you tell me what it prints
+- During the talk, we'll play a little game, where I show a small code snippet
+and if it contains a `cout`, you tell me what it prints.
 - Let's give it a quick try >>
-- I'm amazed to have such a qulified audience >>
+- Fantastic, let's go on. >>
 ---
 ## Size of callable *things*
 Note:
@@ -173,7 +174,7 @@ decltype(f) == void(*)(int);
 ```
 <!-- .element: class="fragment" -->
 Note:
-- You guessed it, it's: >>
+- What do you think the type of f is? It's: >>
 - Still fairly reasonable >>
 ---
 ### Member function pointers
@@ -228,14 +229,14 @@ decltype(f) == decltype(f)
 <!-- .element: class="fragment" -->
 Note:
 - So, how about this? >>
-- You guessed right, this was a trick question.
+- This was a trick question.
 - Every lambda has a unique type >>
 ---
-# Alternatives
+## Alternatives
 Note:
 - Maybe we don't need magic. >>
 ---
-# Coroutines
+## Coroutines
 Note:
 - For those unfamiliar with it, coroutines are a current **TS**
 - With them you can suspend and resume functions
@@ -296,10 +297,11 @@ void bar()
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Not all hope is lost, we still have arguably the best C++ feature left >> >>
+- Not all hope is lost, we still have arguably the best C++ feature left >>
+- Yes, funciton pointers >>
 - Yes that's valid C++. What does it print?
 - If you are confused by what you are looking at,
-- watch James McNeills great lightning talk from this years MeetingC++
+watch James McNeills great lightning talk from this years MeetingC++
 ---
 ```cpp
 void(*f)(int) = [](int arg) { std::cout << arg; };
@@ -505,7 +507,8 @@ Note:
 - You guessed it, again it prints 3
 - Although each lambda has a unique type, here there is only **ONE**
 lambda, which means that, >>
-- gets created only once, the first time this constructor is called.
+- cap gets created only once, the first time this constructor is called.
+- And then every new call, will overwrite the content.
 ---
 Easy to use correctly
 <!-- .element: class="fragment" -->
@@ -525,7 +528,7 @@ Hard to use incorrectly
 Note:
 - Easy to use correctly >> and >> Hard to use incorrectly
 ---
-## How about we store the closure inplace
+### How about we store the closure inplace
 Note:
 - We could just store the closure inside the delegate object. >>
 ---
@@ -716,7 +719,6 @@ Note:
 - If we construct it with a pure function, we'll pay none the less >>
 ---
 How about we split interface and implementation
-<!-- .element: class="fragment" -->
 * pure
 <!-- .element: class="fragment" -->
 * inplace_triv
@@ -806,6 +808,7 @@ template<
     };
 }
 ```
+<!-- .element: class="fragment" -->
 Note:
 - Let's look at the implementation of copy_op. >>
 - It's fairly straight forward, we write into the local storage object,
@@ -838,7 +841,7 @@ del_t del_b = del_a; // can we copy?
 Note:
 - Consider this example >>
 - We would have to make decisions at compile time about run time properties.
-- I see 2 possible solutions if you *really* want move only delegates.
+- I see 2 possible solutions if you *really* want, move only delegates.
 - You could either make a move only delegate, or have a throwing copy. >>
 ---
 ```cpp
@@ -899,7 +902,9 @@ Note:
 - Still, we could be modifying storage,
 so we have to mark storage as mutable. >> >>
 ---
-# Designing the interface
+## Designing the interface
+Note:
+- Designing the interface >>
 ---
 Why did we even split interface and implementation?
 
@@ -908,7 +913,7 @@ How do we bring it all together?
 Note:
 - Initially I didn't.
 - There were multiple constructors and flags.
-- After a while is was coplicated to keep track of all the posibilites,
+- After a while is was complicated to keep track of all the posibilites,
 due to all the conditionality involved,
 depending on what it was constructed with. >>
 - How do we bring it all together? >>
@@ -926,11 +931,10 @@ Note:
 D: Show on godbolt std::function version,
 D: then variant version,
 D: then show just calling pure
-- Not only is it not **ZOA** anymore,
+- Not only is it not a **ZOA** anymore,
 - It's not even better than plain std::function. >>
 ---
 Was all that for nothing?
-<!-- .element: class="fragment" -->
 
 Is there just no better way of solving this problem?
 <!-- .element: class="fragment" -->
@@ -940,9 +944,9 @@ Note:
 but again and again bugs forced me to abandon my previous ideas. >>
 After a couple of days, filled with the fruitless endevor of,
 saving a sunken ship, I finally realized:
-- Yes there is no better way of solving this problem >>
+- Yes, there is no better way of solving this problem >>
 ---
-# I was trying to solve the wrong problem
+## I was trying to solve the wrong problem
 Note:
 - I was trying to solve the wrong problem >>
 ---
@@ -953,7 +957,7 @@ Note:
 - What did we say earlier about C++? Right. >>
 - you only pay for what you use.
 - But we have no idea what the user will use.
-- Let's make the user tell us what he wants.
+- Let's make the user tell us what he want s.
 - You tell us what you want, and that's what you'll get.
 - No background magic trying to figure out what the user wants. >>
 ---
@@ -998,7 +1002,7 @@ it results in cleaner code.
 - However it seems people want empyt construction,
 and if called empty it should explode nicely.
 - We could just add a boolean flag, empty. >>
-- That's not nice. Maybe there is better way. >>
+- That's not nice. Maybe there is a better way. >>
 ---
 ```cpp
 template<
