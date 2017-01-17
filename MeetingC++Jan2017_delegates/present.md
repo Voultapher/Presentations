@@ -155,7 +155,7 @@ std::cout << sizeof(f);
 <!-- .element: class="fragment" -->
 Note:
 - Let's continue with lambdas >>
-- 1 byte, so we already see a diference >>
+- 1 byte, so we already see a difference >>
 - This time it's sizeof(int), usually 4 byte >>
 - Again, 1 byte.
 - The size of a closure depends soly on the size of what it captures >>
@@ -298,7 +298,7 @@ void bar()
 <!-- .element: class="fragment" -->
 Note:
 - Not all hope is lost, we still have arguably the best C++ feature left >>
-- Yes, funciton pointers >>
+- Yes, function pointers >>
 - Yes that's valid C++. What does it print?
 - If you are confused by what you are looking at,
 watch James McNeills great lightning talk from this years MeetingC++
@@ -309,7 +309,7 @@ f(3);
 ```
 <!-- .element: class="fragment" -->
 Note:
-- On a more serious note, we'll see that they can be very usefull >>
+- On a more serious note, we'll see that they can be very useful >>
 - Lambdas are convertible to function pointers >>
 ---
 
@@ -337,7 +337,7 @@ delegate del{ [](int arg) { std::cout << arg; } };
 del(3);
 ```
 Note:
-- It's your time agian >>
+- It's your time again >>
 ---
 Note:
 - With the help of templates we can make it generic
@@ -388,7 +388,7 @@ Note:
 - sizeof(delegate) is the size of one function pointer,
 where should it store the closure?
 - The array is larger than the entire delegate class,
-there is literraly no way of stuffing the information in there >>
+there is literally no way of stuffing the information in there >>
 ---
 ## Convert to functional programming
 <!-- .element: class="fragment" -->
@@ -402,7 +402,7 @@ Note:
 - Maybe, there is a way of constructing a function pointer
 with a capturing lambda.
 - The issue is, that we have to store the closure somewhere
-- Enter C++'s least ambigious keyword >> >>
+- Enter C++'s least ambiguous keyword >> >>
 ---
 ```cpp
 static int val = 4;
@@ -472,7 +472,7 @@ Note:
 - We are golden now, right?
 - Someone see any issues?
 - We haven't talked about copying and moving, but let's do that later.
-- We are doing inproper argument type forwarding.
+- We are doing improper argument type forwarding.
 - To avoid unnecessary moving, it should be >>
 ---
 ```cpp
@@ -519,7 +519,7 @@ Note:
 - Sure we could tell the user to never do that.
 - However this would result in an interface that is
 - Easy to use correctly >> and >> Easy to use incorrectly
-- When truely what we want is >>
+- When truly what we want is >>
 ---
 Easy to use correctly
 
@@ -542,7 +542,7 @@ public:
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Now what should the local varible type be? >>
+- Now what should the local variable type be? >>
 - The type of the closure does only become visible in the constructor,
 as far as I know there is no way of making that type visible to other parts
 of the class.
@@ -601,7 +601,7 @@ std::cout << 6;
 Note:
 - We forgot a ::type at the end of aligned_storage.
 - Trust me you don't want to debug, that.
-- By writing into storage, which essentally was an empty
+- By writing into storage, which essentially was an empty
 struct, we corrupted the stack >>
 ---
 Note:
@@ -731,10 +731,10 @@ Note:
 - Let's create one implementation per use case. >>
 - pure, only works with pure functions. >>
 - inplace_triv stores the closure inplace,
-only works with trivailly constructable and destructable types. >>
+only works with trivially constructable and destructable types. >>
 - inplace stores the closure inplace.
 - dynamic stores the closure on the heap.
-- More on why we should make that seperation, later. >>
+- More on why we should make that separation, later. >>
 ---
 ```cpp
 ~inplace()
@@ -746,7 +746,7 @@ Note:
 - Both pure and inplace_triv have default copy, move and destruction.
 - With inplace it gets a bit more tricky, we cannot just copy the storage
 object byte for byte.
-- Agian, same issue, how do we get the closure out of
+- Again, same issue, how do we get the closure out of
 storage in those operations?
 - Let's first look at the destruction. >>
 ---
@@ -829,7 +829,7 @@ template<
 }
 ```
 Note:
-- As you can see, it is just a dummy function tha'll fail on instanciation.
+- As you can see, it is just a dummy function that'll fail on instantiation.
 - Why can't we build a delegate with move only types? >>
 ---
 ```cpp
@@ -913,7 +913,7 @@ How do we bring it all together?
 Note:
 - Initially I didn't.
 - There were multiple constructors and flags.
-- After a while is was complicated to keep track of all the posibilites,
+- After a while is was complicated to keep track of all the possibilities,
 due to all the conditionality involved,
 depending on what it was constructed with. >>
 - How do we bring it all together? >>
@@ -942,7 +942,7 @@ Note:
 - At that point I was somewhat hitting a wall.
 - I was frustrated, it all looked so good,
 but again and again bugs forced me to abandon my previous ideas. >>
-After a couple of days, filled with the fruitless endevor of,
+After a couple of days, filled with the fruitless endeavor of,
 saving a sunken ship, I finally realized:
 - Yes, there is no better way of solving this problem >>
 ---
@@ -999,7 +999,7 @@ R operator() (Args&&... args) const
 Note:
 - I'd like a world where people are ok with no empty constructor,
 it results in cleaner code.
-- However it seems people want empyt construction,
+- However it seems people want empty construction,
 and if called empty it should explode nicely.
 - We could just add a boolean flag, empty. >>
 - That's not nice. Maybe there is a better way. >>
@@ -1016,8 +1016,8 @@ template<
 ```
 <!-- .element: class="fragment" -->
 Note:
-- What excatly are we building here?
-- We are storing function objects, so why not store a thrwoing function?
+- What exactly are we building here?
+- We are storing function objects, so why not store a throwing function?
 - Said function: >>
 - And the empty constructor >>
 ---
@@ -1048,14 +1048,14 @@ Note:
 Benchmark with and without small size optimization
 
 # Lessons learned
-Do not be afraid to challange a status quo!
-By seperating interface from implementation, you get more freedom and if one implementation
+Do not be afraid to challenge a status quo!
+By separating interface from implementation, you get more freedom and if one implementation
 works and the other does not. You know its not an interface issue.
 
-Test drived development
+Test driven development
 
 ---
-Note:Did you notice, we barely used any controll flow statements?
+Note:Did you notice, we barely used any control flow statements?
 Note:In this entire 600 line, implementation there are only 2 ifs.
 Note:The ones in the inplace copy and move assignments.
 Note:That's it. No switch, no loops.
