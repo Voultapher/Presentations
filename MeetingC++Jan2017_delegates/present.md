@@ -340,7 +340,7 @@ Note:
 - It's your time again >>
 ---
 Note:
-- [With the help of templates we can make it generic](https://godbolt.org/g/CeRbBx)
+- [With the help of templates we can make it generic](https://godbolt.org/g/jA9tQn)
 - Words >>
 ---
 ```cpp
@@ -398,7 +398,7 @@ the compiler can resolve the address of val at compile time
 - Now we can do >>
 ---
 Note:
-- [With that we can add a new constructor to delegate](https://godbolt.org/g/ygRvVg)
+- [With that we can add a new constructor to delegate](https://godbolt.org/g/fxhIh7)
 ---
 ```cpp
 thread_local static T cap{ std::forward<T>(closure) };
@@ -545,7 +545,7 @@ Note:
 struct, we corrupted the stack >>
 ---
 Note:
-- [With that we can change delegate to](https://godbolt.org/g/Ao4mWA)
+- [With that we can change delegate to](https://godbolt.org/g/NnRBAs)
 - So, now we successfully stored the closure, but how do we get it back out?
 - Again we have no way of making the type visible to the rest of the class,
 - operator() invokes the function pointer.
@@ -572,7 +572,7 @@ Note:
 - That solves our forwarding issue.
 ---
 Note:
-- [So our entire class now looks like this](https://godbolt.org/g/OpHfam)
+- [So our entire class now looks like this](https://godbolt.org/g/Toju8d)
 - Words >>
 ---
 # ~~ZOA~~
@@ -790,10 +790,10 @@ there is a good talk from this years cppcon called:
 ---
 Note:
 - Let's see it in action
-- [std::function version](https://godbolt.org/g/JNjmwA)
+- [std::function version](https://godbolt.org/g/uUVZvz)
 - [variant version](https://gist.github.com/Voultapher/42964ed34db8e0b26d88f6f00a0db010)
 - maybe it's a bad implementation, let's try another
-- [when truely all we wanted is](https://godbolt.org/g/JC00ly)
+- [when truely all we wanted is](https://godbolt.org/g/qHCZmG)
 - Not only is it not a **ZOA** anymore,
 - It's not even better than plain std::function. >>
 ---
