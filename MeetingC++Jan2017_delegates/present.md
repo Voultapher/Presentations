@@ -13,8 +13,8 @@ template<typename Func> void sort(range, Func comp_func)
 <!-- .element: class="fragment" -->
 Note:
 - You want to give the user the option of customizing what your program does.
-- Example std::sort >>
-- templates allow for an elegant Zero overhead abstraction solution >> >>
+- Example std::sort >> **5s**
+- templates allow for an elegant Zero overhead abstraction solution >> **5s** >>
 ---
 But what if want to implement something like a task queue?
 ```cpp
@@ -22,7 +22,7 @@ template<typename Func> std::vector<Func> queue;
 ```
 <!-- .element: class="fragment" -->
 Note:
-- But what if want to implement something like a task queue? >>
+- But what if want to implement something like a task queue? >> 5s
 - This works, however the user can only provide one kind of function type. >>
 ---
 `std::tuple`
@@ -79,7 +79,7 @@ int val = 3;
 auto lam = [val](int arg) -> int { return arg + val; };
 ```
 Note:
-- Lambdas! >>
+- Lambdas! **10s** >>
 ---
 ```cpp
 struct closure
@@ -99,7 +99,7 @@ closure old{ val };
 <!-- .element: class="fragment" -->
 Note:
 - This is not a new concept.
-- Back before C++11, people had ways of expressing the same. >>
+- Back before C++11, people had ways of expressing the same. >> **20s**
 - It's just less pretty and more error prone >>
 ---
 ```cpp
@@ -109,8 +109,8 @@ for (int i = 1; i <= 10; ++i)
 <!-- .element: class="fragment" -->
 Note:
 - During the talk, we'll play a little game, where I show a small code snippet
-and if it contains a `cout`, you tell me what it prints.
-- Let's give it a quick try >>
+and if it contains a `cout`, I want you to tell me what you think it prints.
+- Let's give it a quick try >> **10s**
 - Fantastic, let's go on. >>
 ---
 ## Size of callable *things*
@@ -130,7 +130,7 @@ void bar()
 8 or 4 byte
 <!-- .element: class="fragment" -->
 Note:
-- Let's start with function pointers >>
+- Let's start with function pointers >> **10s**
 - On most platforms it's the size of a pointer, so 8 or 4 byte respectively >>
 ---
 Lambdas
@@ -154,9 +154,9 @@ std::cout << sizeof(f);
 1 byte
 <!-- .element: class="fragment" -->
 Note:
-- Let's continue with lambdas >>
-- 1 byte, so we already see a difference >>
-- This time it's sizeof(int), usually 4 byte >>
+- Let's continue with lambdas >> **5s**
+- 1 byte, so we already see a difference >> **5s**
+- This time it's sizeof(int), usually 4 byte >> **5s**
 - Again, 1 byte.
 - The size of a closure depends soly on the size of what it captures >>
 ---
@@ -174,7 +174,7 @@ decltype(f) == void(*)(int);
 ```
 <!-- .element: class="fragment" -->
 Note:
-- What do you think the type of f is? It's: >>
+- What do you think the type of f is? It's: >> **5s**
 - Still fairly reasonable >>
 ---
 ### Member function pointers
@@ -188,7 +188,7 @@ auto f = &foo::bar;
 ```
 <!-- .element: class="fragment" -->
 Note:
-- How about member functions >>
+- How about member functions >> **5s**
 - You guessed it, this is invalid, bar is private >>
 ---
 ```cpp
@@ -214,9 +214,9 @@ foo obj;
 ```
 <!-- .element: class="fragment" -->
 Note:
-- So what's the type of f? >>
+- So what's the type of f? >> **5s**
 - Now how about calling f? >>
-- Nope >>
+- Let me tell you, it's not >> **5s**
 - It makes sense, that calling non static member functions,
 need some way of accessing the current state of the object >>
 ---
@@ -228,8 +228,8 @@ decltype(f) == decltype(f)
 ```
 <!-- .element: class="fragment" -->
 Note:
-- So, how about this? >>
-- This was a trick question.
+- How about this? >> **5s**
+- That was a trick question.
 - Every lambda has a unique type >>
 ---
 ## Alternatives
@@ -253,8 +253,9 @@ coro_return_type<int> test()
 ```
 <!-- .element: class="fragment" -->
 Note:
-- This is a subroutine >>
-- That is a coroutine >>
+- This is a subroutine >> **3s**
+- That is a coroutine >> **10s**
+- co_await is a new keyword, coro_return_type is a coroutine_handle >>
 ---
 ```cpp
 util::coro_task task_;
@@ -270,19 +271,21 @@ template<typename F> explicit delegate(F&& func)
 }
 
 ```
+<!-- .element: class="fragment" -->
 Note:
-- A simplified version with just the important parts,
+- Diving right into it, a very simplified version >> **15s**
 - The idea is that we store a coroutine_handle which points to
 a suspended function, which once resumed will call our function. >>
 ---
 ## That's it?
 Note:
-- Let's benchmark it
+- Before we try to fix all the problems with,
+I suggest we benchmark it, and see if the idea works at all.
 D: Switch to visual studio, and run benchmark
 
 - That didn't work out :|. Why? Coroutines internally use type erasure,
-again we have to store the state somewhere,
-however this time we are storing both the closure and the function state
+again we have to store the closure somewhere.
+- However this time, we are storing both the closure and the function state >>
 ---
 ## Function pointers
 <!-- .element: class="fragment" -->
@@ -298,7 +301,7 @@ void bar()
 <!-- .element: class="fragment" -->
 Note:
 - Not all hope is lost, we still have arguably the best C++ feature left >>
-- Yes, function pointers >>
+- Yes, function pointers >> **10s**
 - Yes that's valid C++. What does it print?
 - If you are confused by what you are looking at,
 watch James McNeills great lightning talk from this years MeetingC++
@@ -309,10 +312,9 @@ f(3);
 ```
 <!-- .element: class="fragment" -->
 Note:
-- On a more serious note, we'll see that they can be very useful >>
+- On a more serious note, we'll see that they can be very useful >> **5s**
 - Lambdas are convertible to function pointers >>
 ---
-
 ```
 class delegate
 {
@@ -330,15 +332,16 @@ private:
 };
 ```
 Note:
-- A very basic delegate implementation using function pointers >>
+- A very basic delegate implementation using function pointers >> **20s**
 ---
 ```cpp
 delegate del{ [](int arg) { std::cout << arg; } };
 del(3);
 ```
 Note:
-- It's your time again >>
+- It's your time again **5s** >>
 ---
+# Generic
 Note:
 - [With the help of templates we can make it generic](https://godbolt.org/g/jA9tQn)
 - Words >>
@@ -359,7 +362,7 @@ Only captureless lambdas are convertible to function pointers
 <!-- .element: class="fragment" -->
 Note:
 - We are done right? Although there is one small problem. Anyone an idea? >>
-- That's invalid >>
+- **15s** That's invalid! >>
 - There is a good reason for that, think back to the size of closures.
 - sizeof(delegate) is the size of one function pointer,
 where should it store the closure?
@@ -393,12 +396,13 @@ int(*f)(int) = pure;
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Pure lambdas aren't that pure after all, this works because
+- **10s** Pure lambdas aren't that pure after all, this works because
 the compiler can resolve the address of val at compile time
-- Now we can do >>
+- Now we can do >> **3s** >>
 ---
 Note:
-- [With that we can add a new constructor to delegate](https://godbolt.org/g/fxhIh7)
+- [With that we can add a new constructor to our
+delegate class](https://godbolt.org/g/fxhIh7)
 ---
 ```cpp
 thread_local static T cap{ std::forward<T>(closure) };
@@ -410,7 +414,7 @@ invoke_ptr_ = static_cast<invoke_ptr_t>([](Args... args) -> R
 ```
 Note:
 - We are golden now, right?
-- Someone see any issues?
+- Someone see any issues? **10s**
 - We haven't talked about copying and moving, but let's do that later.
 - We are doing improper argument type forwarding.
 - To avoid unnecessary moving, it should be >>
@@ -424,7 +428,7 @@ invoke_ptr_ = static_cast<invoke_ptr_t>([](Args&&... args) -> R
 });
 ```
 Note:
-- We should be passing in the arguments as rvalue references.
+- We should be passing in the arguments as rvalue references. **5s**
 - But that does not work, as that would not fit the function pointer type. >>
 ---
 ```cpp
@@ -435,7 +439,7 @@ std::vector<del_t> vec;
 for (int i = 0; i <= 3; ++i)
     vec.emplace_back([i]() { return i; });
 
-std::cout << vec.front()();
+std::cout << vec.back()();
 ```
 <!-- .element: class="fragment" -->
 ```cpp
@@ -443,12 +447,12 @@ thread_local static T cap{ std::forward<T>(closure) };
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Let's look at this >>
-- You guessed it, again it prints 3
+- Let's look at this >> **15s**
+- You guessed it, it pirnts 0.
 - Although each lambda has a unique type, here there is only **ONE**
 lambda, which means that, >>
-- cap gets created only once, the first time this constructor is called.
-- And then every new call, will overwrite the content.
+- cap gets created only once. **3s**
+- The first time this constructor is called.
 ---
 Easy to use correctly
 <!-- .element: class="fragment" -->
@@ -482,7 +486,7 @@ public:
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Now what should the local variable type be? >>
+- Now what should the local variable type be? >> **5s**
 - The type of the closure does only become visible in the constructor,
 as far as I know there is no way of making that type visible to other parts
 of the class.
@@ -509,7 +513,7 @@ Note:
 std::cout << 6;
 ```
 Note:
-- So what does this print?
+- So what does this print? **15s** >>
 ---
 # UB
 Note:
@@ -526,7 +530,7 @@ std::cout << 6;
 ```
 Note:
 - Yes it prints 3, and then it corrupts the stack trying to leave
-the inner scope.
+the inner scope. **5s**
 - Who can spot the bug? >>
 ---
 ```cpp
@@ -539,17 +543,17 @@ the inner scope.
 std::cout << 6;
 ```
 Note:
-- We forgot a ::type at the end of aligned_storage.
+- We forgot a ::type at the end of aligned_storage. **2s**
 - Trust me you don't want to debug, that.
 - By writing into storage, which essentially was an empty
 struct, we corrupted the stack >>
 ---
 Note:
-- [With that we can change delegate to](https://godbolt.org/g/NnRBAs)
+- [With that we can change delegate to](https://godbolt.org/g/NnRBAs) UB
 - So, now we successfully stored the closure, but how do we get it back out?
 - Again we have no way of making the type visible to the rest of the class,
 - operator() invokes the function pointer.
-- So how about we change the function pointer type? >>
+- How about we change the function pointer type? >>
 ---
 ```cpp
 template<typename T> explicit delegate(T&& closure)
@@ -558,15 +562,16 @@ template<typename T> explicit delegate(T&& closure)
 
 	invoke_ptr_ = static_cast<invoke_ptr_t>(
 		[](storage_t& storage, Args&&... args) -> R
-	{
-		return reinterpret_cast<T&>(storage)(
-            std::forward<Args>(args)...
-        );
-	});
+    	{
+    		return reinterpret_cast<T&>(storage)(
+                std::forward<Args>(args)...
+            );
+    	}
+    );
 }
 ```
 Note:
-- I'll give a minute to look at it.
+- I'll give a minute to look at it. **45s**
 - This works because inside a lambda all current types are visible
 - Note the change to the function signature.
 - That solves our forwarding issue.
@@ -604,13 +609,14 @@ only works with trivially constructable and destructable types. >>
 	// call closure destructor
 }
 ```
+<!-- .element: class="fragment" -->
 Note:
 - Both pure and inplace_triv have default copy, move and destruction.
 - With inplace it gets a bit more tricky, we cannot just copy the storage
 object byte for byte.
 - Again, same issue, how do we get the closure out of
 storage in those operations?
-- Let's first look at the destruction. >>
+- Let's first look at the destruction. >> **3s** >>
 ---
 # MORE FUNCTION POINTERS
 <!-- .element: class="fragment" -->
@@ -630,7 +636,7 @@ template<typename T> explicit inplace(T&& closure)
 }
 ```
 Note:
-- We'll store a second function pointer >>
+- We'll store a second function pointer **10s** >>
 ---
 ```cpp
 ~inplace()
@@ -640,7 +646,7 @@ Note:
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Now we can do. >>
+- Now we can do. >> **5s** >>
 ---
 ```cpp
 template<typename T> explicit inplace(T&& closure)
@@ -652,8 +658,8 @@ template<typename T> explicit inplace(T&& closure)
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Similar story for the copy operations >>
-- So why put another layer of indirection in there?
+- Similar story for the copy operations >> **5s**
+- So why put another layer of indirection in there? >>
 ---
 ```cpp
 template<
@@ -672,7 +678,7 @@ template<
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Let's look at the implementation of copy_op. >>
+- Let's look at the implementation of copy_op. >> **15s**
 - It's fairly straight forward, we write into the local storage object,
 the closure that is currently stored in the source object.
 - But why the enable_if? Let's look a the other overload >>
@@ -691,6 +697,7 @@ template<
 }
 ```
 Note:
+- **10s**
 - As you can see, it is just a dummy function that'll fail on instantiation.
 - Why can't we build a delegate with move only types? >>
 ---
@@ -701,9 +708,10 @@ del_t del_b = del_a; // can we copy?
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Consider this example >>
+- Consider this example >> **10s**
 - We would have to make decisions at compile time about run time properties.
-- I see 2 possible solutions if you *really* want, move only delegates.
+- I see 2 possible solutions,
+ if you *really* want to build delegates with move only types.
 - You could either make a move only delegate, or have a throwing copy. >>
 ---
 ```cpp
@@ -717,7 +725,7 @@ inplace(const inplace& other) :
 ```
 <!-- .element: class="fragment" -->
 Note:
-- The copy constructor is fairly straight forward >>
+- The copy constructor is fairly straight forward >> **10s**
 - Note, we have to use the new copy pointer >>
 ---
 ```
@@ -737,8 +745,8 @@ inplace& operator= (const inplace& other)
 ```
 <!-- .element: class="fragment" -->
 Note:
-- The copy assignment is similar >>
-- Notice, this time we have to destroy our closure before copying >>
+- The copy assignment is similar >> **15s**
+- This time we have to destroy our closure before copying >>
 ---
 ```cpp
 R operator() (Args&&... args) const
@@ -749,7 +757,7 @@ R operator() (Args&&... args) const
 <!-- .element: class="fragment" -->
 Note:
 - In order to stay close to std::function's api,
-the calling operator should be marked const. >> >>
+the calling operator should be marked const. >> **5s** >>
 ---
 ```cpp
 private:
@@ -762,7 +770,7 @@ private:
 <!-- .element: class="fragment" -->
 Note:
 - Still, we could be modifying storage,
-so we have to mark storage as mutable. >> >>
+so we have to mark storage as mutable. >> **5s** >>
 ---
 ## Designing the interface
 Note:
@@ -841,13 +849,14 @@ class delegate<R(Args...), Spec, size>;
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Here is what it looks like >>
+- Here is what it looks like >> **20s**
 - We let the user decide what kind of limitations they want.
 - And we even provide a default. >>
 ---
 [Let's take a look a the result](https://gist.github.com/Voultapher/2ee61395ea86c49d886465ceb8b0b214)
 Note:
-- Words: >>
+- Let's take a look a the result:
+- D: show result >>
 ---
 ```cpp
 R operator() (Args&&... args) const
@@ -863,8 +872,8 @@ Note:
 - I'd like a world where people are ok with no empty constructor,
 it results in cleaner code.
 - However it seems people want empty construction,
-and if called empty it should explode nicely.
-- We could just add a boolean flag, empty. >>
+and if called empty, it should explode nicely.
+- We could just add a boolean flag, empty. >> **7s**
 - That's not nice. Maybe there is a better way. >>
 ---
 ```cpp
@@ -881,7 +890,7 @@ template<
 Note:
 - What exactly are we building here?
 - We are storing function objects, so why not store a throwing function?
-- Said function: >>
+- Said function: >> **5s**
 - And the empty constructor >>
 ---
 ```cpp
@@ -894,6 +903,7 @@ explicit inplace() noexcept :
 }
 ```
 Note:
+- **15s**
 - That's all we have to change. >>
 - Making checking for emptyness equally simple. >>
 ---
@@ -904,6 +914,7 @@ bool empty() const noexcept
 }
 ```
 Note:
+- **5s**
 - That's it. Sure we glossed over a lot of details.
 - None the less, those are all the important pieces you need. >>
 ---
