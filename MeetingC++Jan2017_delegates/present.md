@@ -918,44 +918,70 @@ Note:
 - That's it. Sure we glossed over a lot of details.
 - None the less, those are all the important pieces you need. >>
 ---
-# Benchmarks
-Benchmark with and without small size optimization
-
-# Lessons learned
-Do not be afraid to challenge a status quo!
-By separating interface from implementation, you get more freedom and if one implementation
-works and the other does not. You know its not an interface issue.
-
-Test driven development
-
+## Benchmarks
+Note:
+- Benchmark with and without small size optimization
 ---
-Note:Did you notice, we barely used any control flow statements?
-Note:In this entire 600 line, implementation there are only 2 ifs.
-Note:The ones in the inplace copy and move assignments.
-Note:That's it. No switch, no loops.
-Note:Why is that?
-# Type oriented design
-Note:Fundamentally, every program is some sort of data transformations.
-Note:Take data, transform it and put it somewhere.
-Note:Ask yourself, what is a type?
-Note:At its core, a type describes a memory layout,
-Note:so what is more ideal than a type, for describing data transformations?
+## Test driven development
+<!-- .element: class="fragment" -->
+Note:
+- I want to take some time,
+and talk about some of the applied design philosophies. >>
+- Test driven development
+- Whenever I develop software, I think about how you, the user could break it.
+- So as I kept finding new bugs,
+whilst at the same time rewriting large chunks of the code,
+it helped tremendously to offload a thought like,
+"could it fail if that happens?", to a test case. >>
 ---
-
+## Type oriented design
+<!-- .element: class="fragment" -->
+Note:
+- Did you notice, we barely used any control flow statements?
+- In this entire 600 line, implementation there are only 2 ifs.
+- The ones in the inplace copy and move assignments.
+- That's it. No switch, no loops.
+- Why is that? >>
+- Fundamentally, every program is some sort of data transformations.
+- Take data, transform it and put it somewhere.
+- Ask yourself, what is a type?
+- At its core, a type describes a memory layout,
+- so what is more ideal than a type, for describing data transformations? >>
+---
+## Lessons learned
+* Do not be afraid to challenge a status quo!
+<!-- .element: class="fragment" -->
+* The price of magic is runtime
+<!-- .element: class="fragment" -->
+* Be responsible for your state
+<!-- .element: class="fragment" -->
+Note:
+- Let us look at what we learned >>
+- Do not be afraid to challenge a status quo!
+- Sometimes it takes redefining the problem to progress. >>
+- The price of *magic* is runtime
+- Interfaces that try to guess what the user want's are fundamentally doomed,
+such as the bloated mess that is OpenGL. >>
+- Be responsible for your state
+- When it comes to state, it's like children, it's your's.
+- Don't just give it to someone and hope they'll take good care of it. >>
 ---
 # Questions
-Note:I'll start
+Note:
+- I'll start >>
 ---
 How do you know it works?
-Note:I don't. However, this may convince you.
-D: Show IncludeOS server.
-
-### Links:
-[James McNellis - "my favorite C++ feature"](https://youtu.be/6eX9gPithBo)
-[David Sankel - "Variants: Past, Present, and Future"](https://youtu.be/k3O4EKX4z1c)
-[Full implementation](https://github.com/hioa-cs/IncludeOS/blob/dev/api/util/delegate.hpp)
-
+Note:
+- I don't. However, [this may convince you](139.59.214.141:8080) >>
+---
+## Links:
+* email: lukas.bergdoll@gmail.com
+* [github]()
+* [James McNellis - "my favorite C++ feature"](https://youtu.be/6eX9gPithBo)
+* [David Sankel - "Variants: Past, Present, and Future"](https://youtu.be/k3O4EKX4z1c)
+* [Full implementation](https://github.com/hioa-cs/IncludeOS/blob/dev/api/util/delegate.hpp)
 ---
 # Hiring?
-Note:Shameless plug, if you are currently hiring,
-feel free to talk to me. // better wording
+Note:
+- Shameless plug, if you are hiring,
+I'm currently looking.
