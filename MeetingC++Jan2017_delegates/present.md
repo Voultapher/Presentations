@@ -5,7 +5,7 @@ Note:
 ```cpp
 void sort(range, comp_func)
 ```
-templates allow for an elegant ZOA solution
+templates allow for an elegant ZOA
 <!-- .element: class="fragment" -->
 ```cpp
 template<typename Func> void sort(range, Func comp_func)
@@ -13,8 +13,8 @@ template<typename Func> void sort(range, Func comp_func)
 <!-- .element: class="fragment" -->
 Note:
 - You want to give the user the option of customizing what your program does.
-- Example std::sort >> **5s**
-- templates allow for an elegant Zero overhead abstraction solution >> **5s** >>
+- Example std::sort **5s** >>
+- templates allow for an elegant Zero overhead abstraction >> **5s** >>
 ---
 But what if want to implement something like a task queue?
 ```cpp
@@ -35,7 +35,7 @@ then `tuple` can be a **ZOA** >>
 Enter `std::function`, the *magic* solution.
 <!-- .element: class="fragment" -->
 Note:
-- Enter `std::function`, the -> *magic* solution. >>
+- Enter `std::function`, the >> *magic* solution. >>
 ---
 So how do you implement *magic*?
 Note:
@@ -130,7 +130,7 @@ void bar()
 8 or 4 byte
 <!-- .element: class="fragment" -->
 Note:
-- Let's start with function pointers >> **10s**
+- Let's start with function pointers **10s** >>
 - On most platforms it's the size of a pointer, so 8 or 4 byte respectively >>
 ---
 Lambdas
@@ -154,9 +154,9 @@ std::cout << sizeof(f);
 1 byte
 <!-- .element: class="fragment" -->
 Note:
-- Let's continue with lambdas >> **5s**
-- 1 byte, so we already see a difference >> **5s**
-- This time it's sizeof(int), usually 4 byte >> **5s**
+- Let's continue with lambdas **5s** >>
+- 1 byte, so we already see a difference **5s** >>
+- This time it's sizeof(int), usually 4 byte **5s** >>
 - Again, 1 byte.
 - The size of a closure depends soly on the size of what it captures >>
 ---
@@ -174,7 +174,7 @@ decltype(f) == void(*)(int);
 ```
 <!-- .element: class="fragment" -->
 Note:
-- What do you think the type of f is? It's: >> **5s**
+- What do you think the type of f is? **5s** It's: >>
 - Still fairly reasonable >>
 ---
 ### Member function pointers
@@ -214,9 +214,9 @@ foo obj;
 ```
 <!-- .element: class="fragment" -->
 Note:
-- So what's the type of f? >> **5s**
+- So what's the type of f? **5s** >>
 - Now how about calling f? >>
-- Let me tell you, it's not >> **5s**
+- Let me tell you, it's not **5s** >>
 - It makes sense, that calling non static member functions,
 need some way of accessing the current state of the object >>
 ---
@@ -228,8 +228,8 @@ decltype(f) == decltype(f)
 ```
 <!-- .element: class="fragment" -->
 Note:
-- How about this? >> **5s**
-- That was a trick question.
+- How about this? **5s** >>
+- I admit, that was a trick question.
 - Every lambda has a unique type >>
 ---
 ## Alternatives
@@ -239,20 +239,24 @@ Note:
 ## Coroutines
 Note:
 - For those unfamiliar with it, coroutines are a current **TS**
-- With them you can suspend and resume functions
+- With them you can suspend and resume functions >>
 ---
 ### The Basics
 ```cpp
 void foo() {}
 ```
+subroutine
+<!-- .element: class="fragment" -->
 ```cpp
 coro_return_type<int> test()
 {
 	co_await coro_awaitable_type{};
 }
 ```
+coroutine
 <!-- .element: class="fragment" -->
 Note:
+- Just a quick introduciton >>
 - This is a subroutine >> **3s**
 - That is a coroutine >> **10s**
 - co_await is a new keyword, coro_return_type is a coroutine_handle >>
@@ -332,7 +336,7 @@ private:
 };
 ```
 Note:
-- A very basic delegate implementation using function pointers >> **20s**
+- A very basic delegate implementation using function pointers **20s** >>
 ---
 ```cpp
 delegate del{ [](int arg) { std::cout << arg; } };
@@ -549,9 +553,11 @@ Note:
 struct, we corrupted the stack >>
 ---
 Note:
-- [With that we can change delegate to](https://godbolt.org/g/NnRBAs) UB
-- So, now we successfully stored the closure, but how do we get it back out?
-- Again we have no way of making the type visible to the rest of the class,
+- [With that we can change delegate to](https://godbolt.org/g/NnRBAs)
+- Althoght that is currentlyUB
+- So, now that we successfully stored the closure,
+how do we get it back out?
+- Again we have no way of making the type visible to the rest of the class.
 - operator() invokes the function pointer.
 - How about we change the function pointer type? >>
 ---
@@ -599,7 +605,7 @@ Note:
 - pure, only works with pure functions. >>
 - inplace_triv stores the closure inplace,
 only works with trivially constructable and destructable types. >>
-- inplace stores the closure inplace.
+- inplace stores the closure inplace. >>
 - dynamic stores the closure on the heap.
 - More on why we should make that separation, later. >>
 ---
@@ -904,7 +910,7 @@ explicit inplace() noexcept :
 ```
 Note:
 - **15s**
-- That's all we have to change. >>
+- That's all we have to change.
 - Making checking for emptyness equally simple. >>
 ---
 ```cpp
@@ -920,13 +926,13 @@ Note:
 ---
 ## Benchmarks
 Note:
-- Benchmark with and without small size optimization
+- Let's do some Benchmarks.
 ---
 ## Test driven development
 <!-- .element: class="fragment" -->
 Note:
 - I want to take some time,
-and talk about some of the applied design philosophies. >>
+and talk about applied design philosophies. >>
 - Test driven development
 - Whenever I develop software, I think about how you, the user could break it.
 - So as I kept finding new bugs,
@@ -946,7 +952,7 @@ Note:
 - Take data, transform it and put it somewhere.
 - Ask yourself, what is a type?
 - At its core, a type describes a memory layout,
-- so what is more ideal than a type, for describing data transformations? >>
+so what is more ideal than a type, for describing data transformations? >>
 ---
 ## Lessons learned
 * Do not be afraid to challenge a status quo!
@@ -963,7 +969,7 @@ Note:
 - Interfaces that try to guess what the user want's are fundamentally doomed,
 such as the bloated mess that is OpenGL. >>
 - Be responsible for your state
-- When it comes to state, it's like children, it's your's.
+- When it comes to state, it's like having children, it's your's.
 - Don't just give it to someone and hope they'll take good care of it. >>
 ---
 # Questions
