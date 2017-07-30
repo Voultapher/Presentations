@@ -1,0 +1,3 @@
+[submodule "cppcon2017WebService/reveal.js"]
+	path = cppcon2017WebService/reveal.js
+	url = https://github.com/hakimel/reveal.js.git
