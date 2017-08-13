@@ -2,3 +2,6 @@
 	path = cppcon2017WebService/reveal.js
 	url = https://github.com/hakimel/reveal.js.git
 	ignore = dirty
+[submodule "cppcon2017WebService/example/server/uWebSockets/lib/uWebSockets"]
+	path = cppcon2017WebService/example/server/uWebSockets/lib/uWebSockets
+	url = https://github.com/uNetworking/uWebSockets.git

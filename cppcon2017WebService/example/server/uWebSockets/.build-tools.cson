@@ -1,0 +1,89 @@
+providers: [
+  {
+    key: "bt"
+    config:
+      commands: [
+        {
+          project: ""
+          source: ""
+          name: "Release build && run"
+          command: "make && ./PROJECT_NAME"
+          wd: "./Release"
+          env: {}
+          modifier:
+            shell:
+              command: "bash -c"
+            save_all: {}
+          environment:
+            name: "child_process"
+            config:
+              stdoe: "both"
+          stdout:
+            pipeline: []
+          stderr:
+            pipeline: []
+          output:
+            console:
+              close_success: true
+              queue_in_buffer: true
+              colors: true
+              stdin: true
+          version: 2
+        }
+        {
+          project: ""
+          source: ""
+          name: "build"
+          command: "make"
+          wd: "./Release"
+          env: {}
+          modifier:
+            shell:
+              command: "bash -c"
+            save_all: {}
+          environment:
+            name: "child_process"
+            config:
+              stdoe: "both"
+          stdout:
+            pipeline: []
+          stderr:
+            pipeline: []
+          output:
+            console:
+              close_success: true
+              queue_in_buffer: true
+              colors: true
+              stdin: false
+          version: 2
+        }
+        {
+          project: ""
+          source: ""
+          name: "Release run"
+          command: "./PROJECT_NAME"
+          wd: "./Release"
+          env: {}
+          modifier:
+            shell:
+              command: "bash -c"
+            save_all: {}
+          environment:
+            name: "child_process"
+            config:
+              stdoe: "both"
+          stdout:
+            pipeline: []
+          stderr:
+            pipeline: []
+          output:
+            console:
+              close_success: true
+              queue_in_buffer: true
+              colors: true
+              stdin: true
+          version: 2
+        }
+      ]
+  }
+]
