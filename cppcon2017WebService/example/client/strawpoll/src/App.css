@@ -1,0 +1,22 @@
+.App {
+  text-align: left;
+  margin: 1em;
+  padding: 1em;
+
+  font-size: 1.2em;
+  color: #444;
+  background-color: #fff;
+
+  box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 6px, rgba(0, 0, 0, 0.12) 0px 1px 4px;
+}
+
+.ResultBar {
+  outline: 1px solid #ccc;
+  background-color: #eee;
+  height: 1em;
+}
+
+
+h1 {
+  text-align: center;
+}
