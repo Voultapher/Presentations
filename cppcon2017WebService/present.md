@@ -98,4 +98,62 @@ and even less at such scale. >>
 out javascript. That leads to a lack of interoperability with older languages
 and tools. However, that might be a completely different story, once
 WebAssembly gets DOM bindings. >>
-- The never ending story of browser support >>
+- The never ending story of browser support. Explain Polyfills >>
+
+---
+
+### Example Service
+
+* Persistence
+<!-- .element: class="fragment" -->
+* Bidirectional communication
+<!-- .element: class="fragment" -->
+
+Note:
+- To give you a practical showcase of the technology we'll be talking about,
+let us create a small example service.
+- I want to focus on 2 major requirements. >>
+- Persistence. User interaction will have lasting changes.
+Otherwise we could just ship a client only solution.
+Which could be much easier, and we'd save server costs. >>
+- Bidirectional communication. We want to keep the user up to date,
+without requiring him to pro actively request new information. >>
+
+---
+
+### Link to Example Service
+
+*Trust me, this is "definitely" not a malicious site*
+<!-- .element: class="fragment" -->
+
+
+Note:
+Now comes the moment, where you have to make a leap of faith.
+Do you trust me enough to visit this non https link? >>
+Anyone brave enough?
+Ok, ok, I'll do it myself.
+As you can see this is just a little strawpoll service.
+
+---
+
+### Asynchronous primitives
+
+---
+
+### Socket library
+
+---
+
+### Ip stack
+
+---
+
+# Include OS
+
+---
+
+## Performance
+
+---
+
+# Q&A
