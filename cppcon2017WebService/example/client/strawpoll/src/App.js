@@ -1,6 +1,9 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import { flatbuffers } from './flatbuffers';
+import { Strawpoll } from './strawpoll_generated.js';
+
 import './App.css';
 
 function ResultDescription(props) {
@@ -21,14 +24,14 @@ ResultDescription.propTypes = {
   votes: PropTypes.number.isRequired
 };
 
-const barColorsA = [
+const barColorsA = [ // eslint-disable-line no-unused-vars
   '#4b3947',
   '#e3c17d',
   '#f9f2e5',
   '#9e8e85'
 ];
 
-const barColorsB = [
+const barColorsB = [ // eslint-disable-line no-unused-vars
   '#9eb4db',
   '#756a92',
   '#494165',
@@ -36,7 +39,7 @@ const barColorsB = [
   '#22144f'
 ];
 
-const barColorsC = [
+const barColorsC = [ // eslint-disable-line no-unused-vars
   '#ffd0b0',
   '#ffa996',
   '#e6857c',
@@ -133,11 +136,12 @@ class StrawPoll extends React.Component {
   }
 
   componentDidMount() {
-    //this.setupWebSocketCommunication();
+    this.setupWebSocketCommunication();
   }
 
   setupWebSocketCommunication() {
     this.socket = new WebSocket(this.props.apiUrl);
+    this.socket.binaryType = 'arraybuffer';
 
     this.socket.addEventListener('open', this.fetchPoll);
     this.socket.addEventListener('message', this.handleServerResponse);
@@ -149,7 +153,24 @@ class StrawPoll extends React.Component {
   }
 
   handleServerResponse = (event) => {
-    console.log("Server sent: ", event.data);
+    //console.log("Server sent: ", event);
+
+    const buf = new flatbuffers.ByteBuffer(new Uint8Array(event.data));
+    const response = Strawpoll.Response.getRootAsResponse(buf);
+
+    switch(response.type()) {
+      case Strawpoll.ResponseType.Poll:
+        console.log("Type Poll");
+        break;
+      case Strawpoll.ResponseType.Votes:
+        console.log("Type Votes");
+        break;
+      case Strawpoll.ResponseType.Error:
+        console.error("Error: ", response.error());
+        break;
+      default:
+        console.error("Invalid response type: ", response.type());
+    };
   }
 
   handleDisconnect = (event) => {
@@ -174,7 +195,7 @@ class App extends React.Component {
   render() {
     return (
       <div className="App">
-        <StrawPoll apiUrl={"ws:/test"} />
+        <StrawPoll apiUrl={'ws://localhost:3003'} />
       </div>
     );
   }

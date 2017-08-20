@@ -1,0 +1,53 @@
+// Example IDL file for our monster's schema.
+namespace Strawpoll;
+
+/*enum Color:byte { Red = 0, Green, Blue = 2 }
+
+union Equipment { Weapon } // Optionally add more tables.
+
+struct Vec3 {
+  x:float;
+  y:float;
+  z:float;
+}
+table Monster {
+  pos:Vec3; // Struct.
+  mana:short = 150;
+  hp:short = 100;
+  name:string;
+  friendly:bool = false (deprecated);
+  inventory:[ubyte];  // Vector of scalars.
+  color:Color = Blue; // Enum.
+  weapons:[Weapon];   // Vector of tables.
+  equipped:Equipment; // Union.
+  path:[Vec3];        // Vector of structs.
+}
+table Weapon {
+  name:string;
+  damage:short;
+}*/
+
+table Poll {
+  title:string;
+  options:[string];
+}
+
+table Result {
+  votes:[long];
+}
+
+enum RequestType:byte { Poll, Result }
+
+table Request {
+  type:RequestType;
+  vote:long;
+}
+
+enum ResponseType:byte { Poll, Votes, Error }
+
+table Response {
+  type:ResponseType;
+  poll:Poll;
+  result:Result;
+  error:string;
+}
