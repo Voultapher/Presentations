@@ -129,10 +129,10 @@ class StrawPoll extends React.Component {
   constructor(props) {
     super(props);
 
-    this.state = testState; /*{
+    this.state = {
       title: '',
-      answers: []
-    };*/
+      options: []
+    };
   }
 
   componentDidMount() {
@@ -149,7 +149,12 @@ class StrawPoll extends React.Component {
   }
 
   fetchPoll = (event) => {
-    this.socket.send('Gimme that poll status');
+    const builder = new flatbuffers.Builder(1024);
+    Strawpoll.Response.startResponse(builder);
+    Strawpoll.Response.addType(builder, Strawpoll.RequestType.Poll);
+    builder.finish(Strawpoll.Response.endResponse(builder));
+
+    this.socket.send(builder.asUint8Array());
   }
 
   handleServerResponse = (event) => {
@@ -160,10 +165,10 @@ class StrawPoll extends React.Component {
 
     switch(response.type()) {
       case Strawpoll.ResponseType.Poll:
-        console.log("Type Poll");
+        this.updatePoll(response.poll());
         break;
       case Strawpoll.ResponseType.Votes:
-        console.log("Type Votes");
+        this.updateResult(response.result());
         break;
       case Strawpoll.ResponseType.Error:
         console.error("Error: ", response.error());
@@ -171,6 +176,25 @@ class StrawPoll extends React.Component {
       default:
         console.error("Invalid response type: ", response.type());
     };
+  }
+
+  updatePoll = (poll) => {
+    this.setState({
+      title: poll.title(),
+      options: Array.apply(null, { length: poll.optionsLength() })
+      .map((v, i) => ({
+        text: poll.options(i)
+      }))
+    });
+  }
+
+  updateResult = (result) => {
+    this.setState((prevState) => ({
+      options: prevState.options.map((option, i) => ({
+        text: option.text,
+        votes: result.votes(i)
+      }))
+    }));
   }
 
   handleDisconnect = (event) => {
@@ -181,7 +205,7 @@ class StrawPoll extends React.Component {
     return (
       <div>
         <h1>{this.state.title}</h1>
-        <BarChart answers={this.state.answers} barColors={barColorsC} />
+        <BarChart answers={this.state.options} barColors={barColorsC} />
       </div>
     );
   }

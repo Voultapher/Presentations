@@ -3,6 +3,7 @@
 #include <array>
 #include <cstdint>
 
+#include <vector>
 #include <string>
 
 #include <strawpoll_generated.h>
@@ -77,23 +78,27 @@ int main()
   auto poll_data = PollData{};
 
   flatbuffers::FlatBufferBuilder poll_builder;
+  {
+    Strawpoll::ResponseBuilder res(poll_builder);
+    res.add_type(Strawpoll::ResponseType_Poll);
+    res.add_poll(Strawpoll::CreatePoll(
+      poll_builder,
+      poll_builder.CreateString(poll_data.title),
+      poll_builder.CreateVectorOfStrings([&poll_data]{
+        std::vector<std::string> options;
+        for (const auto& option : poll_data.options)
+          options.emplace_back(option);
+        return options;
+      }())
+    ));
 
-  Strawpoll::ResponseBuilder res(poll_builder);
-  res.add_type(Strawpoll::ResponseType_Poll);
-  res.add_poll(Strawpoll::CreatePoll(
-    poll_builder,
-    poll_builder.CreateString(poll_data.title),
-    poll_builder.CreateVector(std::vector<flatbuffers::Offset<flatbuffers::String>>{
-      "a",
-      "b"
-    })
-  ));
+    poll_builder.Finish(res.Finish());
+  }
 
   //res.add_result(Strawpoll::CreateResult(
   //  builder,
   //  builder.CreateVector(poll_data.votes.data(), poll_data.votes.size())
   //));
-  poll_builder.Finish(res.Finish());
 
   uWS::Hub h;
 
