@@ -15,9 +15,10 @@ struct PollData
   static constexpr auto title = "When will C++ become obsolete?";
   static constexpr auto options = {
     "Around 2050",
-    "Once all the cool kids use ***",
+    "Once all the cool kids use ...",
     "Never",
-    "AI has no use for high level abstractions"
+    "AI has no use for high level abstractions",
+    "Turnip"
   };
   using vote_t = int64_t;
   using votes_t = std::array<vote_t, options.size()>;
@@ -28,7 +29,7 @@ template<typename T, size_t N> void handleInvalidRequest(
   uWS::WebSocket<uWS::SERVER>* ws,
   T (&msg)[N]
 ) {
-  flatbuffers::FlatBufferBuilder builder((sizeof(T) * N) + 8);
+  flatbuffers::FlatBufferBuilder builder((sizeof(T) * N) + 64);
   Strawpoll::ResponseBuilder res(builder);
   res.add_type(Strawpoll::ResponseType_Error);
   res.add_error(builder.CreateString(msg));
@@ -62,12 +63,24 @@ void handleResultRequest(
     handleInvalidRequest(ws, "Invalid vote");
 
   ++votes[vote];
-  const auto vote_str = std::to_string(votes[vote]);
+
+  flatbuffers::FlatBufferBuilder builder(sizeof(votes) + 64);
+  const auto result = Strawpoll::CreateResult(
+    builder,
+    builder.CreateVector(votes.data(), votes.size())
+  );
+
+  Strawpoll::ResponseBuilder res(builder);
+  res.add_type(Strawpoll::ResponseType_Result);
+  res.add_result(result);
+  builder.Finish(res.Finish());
+
+  //std::cout << "Builder Size: " << builder.GetSize() << '\n';
 
   h.getDefaultGroup<uWS::SERVER>().broadcast(
-    vote_str.data(),
-    vote_str.size(),
-    uWS::OpCode::TEXT
+    reinterpret_cast<const char*>(builder.GetBufferPointer()),
+    builder.GetSize(),
+    uWS::OpCode::BINARY
   );
 }
 
@@ -79,9 +92,7 @@ int main()
 
   flatbuffers::FlatBufferBuilder poll_builder;
   {
-    Strawpoll::ResponseBuilder res(poll_builder);
-    res.add_type(Strawpoll::ResponseType_Poll);
-    res.add_poll(Strawpoll::CreatePoll(
+    const auto poll = Strawpoll::CreatePoll(
       poll_builder,
       poll_builder.CreateString(poll_data.title),
       poll_builder.CreateVectorOfStrings([&poll_data]{
@@ -90,15 +101,14 @@ int main()
           options.emplace_back(option);
         return options;
       }())
-    ));
+    );
+
+    Strawpoll::ResponseBuilder res(poll_builder);
+    res.add_type(Strawpoll::ResponseType_Poll);
+    res.add_poll(poll);
 
     poll_builder.Finish(res.Finish());
   }
-
-  //res.add_result(Strawpoll::CreateResult(
-  //  builder,
-  //  builder.CreateVector(poll_data.votes.data(), poll_data.votes.size())
-  //));
 
   uWS::Hub h;
 
@@ -123,6 +133,9 @@ int main()
       handleInvalidRequest(ws, "Invalid request message");
       return;
     }
+
+    // TODO limit voting from single ip
+    std::cout << "Message from: " << ws->getAddress().address << '\n';
 
     const auto request = flatbuffers::GetRoot<Strawpoll::Request>(message);
 

@@ -43,7 +43,7 @@ table Request {
   vote:long;
 }
 
-enum ResponseType:byte { Poll, Votes, Error }
+enum ResponseType:byte { Poll, Result, Error }
 
 table Response {
   type:ResponseType;

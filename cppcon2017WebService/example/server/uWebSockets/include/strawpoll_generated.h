@@ -47,7 +47,7 @@ inline const char *EnumNameRequestType(RequestType e) {
 
 enum ResponseType {
   ResponseType_Poll = 0,
-  ResponseType_Votes = 1,
+  ResponseType_Result = 1,
   ResponseType_Error = 2,
   ResponseType_MIN = ResponseType_Poll,
   ResponseType_MAX = ResponseType_Error
@@ -56,7 +56,7 @@ enum ResponseType {
 inline ResponseType (&EnumValuesResponseType())[3] {
   static ResponseType values[] = {
     ResponseType_Poll,
-    ResponseType_Votes,
+    ResponseType_Result,
     ResponseType_Error
   };
   return values;
@@ -65,7 +65,7 @@ inline ResponseType (&EnumValuesResponseType())[3] {
 inline const char **EnumNamesResponseType() {
   static const char *names[] = {
     "Poll",
-    "Votes",
+    "Result",
     "Error",
     nullptr
   };

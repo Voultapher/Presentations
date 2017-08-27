@@ -65,12 +65,13 @@ ResultBar.propTypes = {
 };
 
 function BarChart(props) {
-  props.answers.sort((a, b) => (a.votes < b.votes));
+  // FIXME talk about shalow copy and sorting as weird for a c++ user
+  const options = props.options.slice().sort((a, b) => (a.votes < b.votes));
 
-  const total = props.answers.reduce((sum, an) => (sum + an.votes), 0);
+  const total = options.reduce((sum, an) => (sum + an.votes), 0);
   return (
     <div className={'BarChart'}>
-      {props.answers.map((an, i) => {
+      {options.map((an, i) => {
         const width = (an.votes / total) * 100;
         return (
           <div key={an.text} style={{ paddingBottom: '1em' }}>
@@ -92,7 +93,7 @@ function BarChart(props) {
 }
 
 BarChart.propTypes = {
-  answers: PropTypes.arrayOf(PropTypes.shape({
+  options: PropTypes.arrayOf(PropTypes.shape({
     text: PropTypes.string.isRequired,
     votes: PropTypes.number.isRequired
   })).isRequired,
@@ -103,26 +104,25 @@ BarChart.defaultProps = {
   barColors: barColorsB
 };
 
-const testState = {
-  title: "What is the meaning of life?",
-  answers: [
-    {
-      text: "Option A",
-      votes: 12
-    },
-    {
-      text: "There is none, so it doesn't matter",
-      votes: 17
-    },
-    {
-      text: "42",
-      votes: 9
-    },
-    {
-      text: "You think to much",
-      votes: 5
-    }
-  ]
+function Vote(props) {
+  return (
+    <ul className="Vote">
+      {props.options.map((option, i) => (
+        <li key={option.text}>
+          <button onClick={() => { props.handleVote(i) }}>
+            {option.text}
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+Vote.propTypes = {
+  options: PropTypes.arrayOf(PropTypes.shape({
+    text: PropTypes.string.isRequired
+  })).isRequired,
+  handleVote: PropTypes.func.isRequired
 };
 
 class StrawPoll extends React.Component {
@@ -130,6 +130,7 @@ class StrawPoll extends React.Component {
     super(props);
 
     this.state = {
+      hasVoted: false,
       title: '',
       options: []
     };
@@ -150,9 +151,19 @@ class StrawPoll extends React.Component {
 
   fetchPoll = (event) => {
     const builder = new flatbuffers.Builder(1024);
-    Strawpoll.Response.startResponse(builder);
-    Strawpoll.Response.addType(builder, Strawpoll.RequestType.Poll);
-    builder.finish(Strawpoll.Response.endResponse(builder));
+    Strawpoll.Request.startRequest(builder);
+    Strawpoll.Request.addType(builder, Strawpoll.RequestType.Poll);
+    builder.finish(Strawpoll.Request.endRequest(builder));
+
+    this.socket.send(builder.asUint8Array());
+  }
+
+  fetchResult = (id) => {
+    const builder = new flatbuffers.Builder(1024);
+    Strawpoll.Request.startRequest(builder);
+    Strawpoll.Request.addType(builder, Strawpoll.RequestType.Result);
+    Strawpoll.Request.addVote(builder, builder.createLong(id));
+    builder.finish(Strawpoll.Request.endRequest(builder));
 
     this.socket.send(builder.asUint8Array());
   }
@@ -162,12 +173,13 @@ class StrawPoll extends React.Component {
 
     const buf = new flatbuffers.ByteBuffer(new Uint8Array(event.data));
     const response = Strawpoll.Response.getRootAsResponse(buf);
+    //console.log("Response Type: ", response.type());
 
     switch(response.type()) {
       case Strawpoll.ResponseType.Poll:
         this.updatePoll(response.poll());
         break;
-      case Strawpoll.ResponseType.Votes:
+      case Strawpoll.ResponseType.Result:
         this.updateResult(response.result());
         break;
       case Strawpoll.ResponseType.Error:
@@ -190,9 +202,10 @@ class StrawPoll extends React.Component {
 
   updateResult = (result) => {
     this.setState((prevState) => ({
+      hasVoted: true,
       options: prevState.options.map((option, i) => ({
         text: option.text,
-        votes: result.votes(i)
+        votes: result.votes(i).toFloat64()
       }))
     }));
   }
@@ -201,11 +214,18 @@ class StrawPoll extends React.Component {
     console.error("WebSocket closed");
   }
 
+  handleVote = (id) => {
+    this.fetchResult(id);
+  }
+
   render() {
     return (
       <div>
         <h1>{this.state.title}</h1>
-        <BarChart answers={this.state.options} barColors={barColorsC} />
+        {this.state.hasVoted
+          ? <BarChart options={this.state.options} barColors={barColorsC} />
+          : <Vote options={this.state.options} handleVote={this.handleVote}/>
+        }
       </div>
     );
   }

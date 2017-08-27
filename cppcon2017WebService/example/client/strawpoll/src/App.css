@@ -20,3 +20,25 @@
 h1 {
   text-align: center;
 }
+
+li {
+  margin-bottom: 1em;
+}
+
+button {
+    background-color: #494165;
+    border: none;
+    border-radius: 2px;
+    color: white;
+    padding: 0.5em 1em;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+button:hover {
+  box-shadow: 0px 1px 2px #888;
+}
