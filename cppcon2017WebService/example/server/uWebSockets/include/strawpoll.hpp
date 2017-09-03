@@ -109,3 +109,21 @@ struct PollData
   };
   ErrorResponses error_responses{};
 };
+
+FlatBufferWrapper make_result(PollData::votes_t& votes)
+{
+  return FlatBufferWrapper{
+    [&votes](flatbuffers::FlatBufferBuilder& builder) -> void
+    {
+      const auto result = Strawpoll::CreateResult(
+        builder,
+        builder.CreateVector(votes.data(), votes.size())
+      );
+
+      Strawpoll::ResponseBuilder res(builder);
+      res.add_type(Strawpoll::ResponseType_Result);
+      res.add_result(result);
+      builder.Finish(res.Finish());
+    }
+  };
+}

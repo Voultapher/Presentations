@@ -26,21 +26,7 @@ void handleResultRequest(
 
   ++poll_data.votes[vote];
 
-  const FlatBufferWrapper result{
-    [&poll_data](flatbuffers::FlatBufferBuilder& builder) -> void
-    {
-      const auto result = Strawpoll::CreateResult(
-        builder,
-        builder.CreateVector(poll_data.votes.data(), poll_data.votes.size())
-      );
-
-      Strawpoll::ResponseBuilder res(builder);
-      res.add_type(Strawpoll::ResponseType_Result);
-      res.add_result(result);
-      builder.Finish(res.Finish());
-    }
-  };
-
+  const auto result = make_result(poll_data.votes);
   const auto result_ref = result.ref();
 
   h.getDefaultGroup<uWS::SERVER>().broadcast(
@@ -57,13 +43,6 @@ int main()
   auto poll_data = PollData{};
 
   uWS::Hub h;
-
-  /*h.onConnection([&h, &poll_data](
-    uWS::WebSocket<uWS::SERVER> *ws,
-    uWS::HttpRequest req
-  ) {
-    std::cout << "Someone connected\n";
-  });*/
 
   h.onMessage([&h, &poll_data](
     uWS::WebSocket<uWS::SERVER>* ws,
