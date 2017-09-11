@@ -6,6 +6,17 @@ import { Strawpoll } from './strawpoll_generated.js';
 
 import './App.css';
 
+function printWrap(val) {
+  console.log("val: ", val);
+  return val;
+}
+
+function uOr(val, fn) {
+  return val === undefined
+    ? undefined
+    : fn(val);
+}
+
 function ResultDescription(props) {
   return (
     <div style={{ marginBottom: 4, overflow: 'hidden' }}>
@@ -140,6 +151,11 @@ class StrawPoll extends React.Component {
     this.setupWebSocketCommunication();
   }
 
+  shouldComponentUpdate(nextProps, nextState) {
+    return nextState.options.length > 0
+      && nextState.options[0].text !== undefined;
+  }
+
   setupWebSocketCommunication() {
     this.socket = new WebSocket(this.props.apiUrl);
     this.socket.binaryType = 'arraybuffer';
@@ -191,20 +207,24 @@ class StrawPoll extends React.Component {
   }
 
   updatePoll = (poll) => {
-    this.setState({
+    console.log("updatePoll called ", this.state);
+    this.setState((prevState) => ({
       title: poll.title(),
       options: Array.apply(null, { length: poll.optionsLength() })
       .map((v, i) => ({
-        text: poll.options(i)
+        text: poll.options(i),
+        votes: uOr(prevState.options[i], (op) => (op.votes))
       }))
-    });
+    }));
   }
 
   updateResult = (result) => {
+    console.log("updateResult called ", this.state);
     this.setState((prevState) => ({
       hasVoted: true,
-      options: prevState.options.map((option, i) => ({
-        text: option.text,
+      options: Array.apply(null, { length: result.votesLength() })
+      .map((v, i) => ({
+        text: uOr(prevState.options[i], (op) => (op.text)),
         votes: result.votes(i).toFloat64()
       }))
     }));
