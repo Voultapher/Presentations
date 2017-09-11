@@ -15,23 +15,13 @@ void sendResponse(
   );
 }
 
-void handleResultRequest(
+void broadcastResponse(
   uWS::Hub& h,
-  uWS::WebSocket<uWS::SERVER>* ws,
-  PollData& poll_data,
-  const PollData::vote_t vote
+  const FlatBufferRef buffer
 ) {
-  if (vote < 0 || vote > static_cast<PollData::vote_t>(PollData::options.size()))
-    sendResponse(ws, poll_data.error_responses.invalid_type.ref());
-
-  ++poll_data.votes[vote];
-
-  const auto result = make_result(poll_data.votes);
-  const auto result_ref = result.ref();
-
   h.getDefaultGroup<uWS::SERVER>().broadcast(
-    reinterpret_cast<const char*>(result_ref.data),
-    result_ref.size,
+    reinterpret_cast<const char*>(buffer.data),
+    buffer.size,
     uWS::OpCode::BINARY
   );
 }
@@ -40,7 +30,7 @@ int main()
 {
   std::cout << "Sever starting up...\n";
 
-  auto poll_data = PollData{};
+  PollData<HippieVoteGuard> poll_data{};
 
   uWS::Hub h;
 
@@ -59,9 +49,6 @@ int main()
       return;
     }
 
-    // TODO limit voting from single ip
-    std::cout << "Message from: " << ws->getAddress().address << '\n';
-
     const auto request = flatbuffers::GetRoot<Strawpoll::Request>(message);
 
     switch(request->type()) {
@@ -69,7 +56,12 @@ int main()
         sendResponse(ws, poll_data.poll_response.ref());
         break;
       case Strawpoll::RequestType_Result:
-        handleResultRequest(h, ws, poll_data, request->vote());
+        poll_data.register_vote(
+          request->vote(),
+          {},
+          [&ws](const FlatBufferRef br) { sendResponse(ws, br); },
+          [&h](const FlatBufferRef br) { broadcastResponse(h, br); }
+        );
         break;
       default:
         sendResponse(ws, poll_data.error_responses.invalid_type.ref());
