@@ -183,6 +183,11 @@ public:
     return set_.insert(address).second;
   }
 
+  bool has_voted(const address_t& address)
+  {
+    return set_.count(address) != 0;
+  }
+
 private:
   set_t set_;
 };
@@ -193,4 +198,5 @@ struct HippieVoteGuard
   using address_t = EmptyAddress;
 
   bool register_address(const address_t&) { return true; }
+  bool has_voted(const address_t&) { return false; }
 };
