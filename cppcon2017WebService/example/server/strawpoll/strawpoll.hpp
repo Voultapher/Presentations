@@ -4,7 +4,8 @@
 #include <cstdint>
 
 #include <vector>
-#include <string>
+#include <unordered_set>
+//#include <string>
 
 #include <strawpoll_generated.h>
 
@@ -64,7 +65,7 @@ template<typename T, size_t N> FlatBufferWrapper make_msg(T (&msg)[N])
   };
 }
 
-struct PollData
+struct PollDetail
 {
   static constexpr auto title = "When will C++ become obsolete?";
   static constexpr auto options = {
@@ -76,7 +77,32 @@ struct PollData
   };
   using vote_t = int64_t;
   using votes_t = std::array<vote_t, options.size()>;
+};
+
+FlatBufferWrapper make_result(PollDetail::votes_t& votes)
+{
+  return FlatBufferWrapper{
+    [&votes](flatbuffers::FlatBufferBuilder& builder) -> void
+    {
+      const auto result = Strawpoll::CreateResult(
+        builder,
+        builder.CreateVector(votes.data(), votes.size())
+      );
+
+      Strawpoll::ResponseBuilder res(builder);
+      res.add_type(Strawpoll::ResponseType_Result);
+      res.add_result(result);
+      builder.Finish(res.Finish());
+    }
+  };
+}
+
+template<typename T> struct PollData : public PollDetail
+{
   votes_t votes{};
+
+  using vote_guard_t = T;
+  vote_guard_t vote_guard;
 
   const FlatBufferWrapper poll_response{
     [&title = title, &options = options](
@@ -108,22 +134,63 @@ struct PollData
     const FlatBufferWrapper invalid_vote = make_msg("Invalid vote");
   };
   ErrorResponses error_responses{};
+
+  template<typename FailFunc, typename SuccessFunc> void register_vote(
+    const vote_t vote,
+    const typename vote_guard_t::address_t& address,
+    FailFunc&& fail_func,
+    SuccessFunc&& success_func
+  )
+  {
+    if (
+      vote < 0
+      || vote > static_cast<PollDetail::vote_t>(PollDetail::options.size())
+    ) {
+      fail_func(error_responses.invalid_vote.ref());
+      return;
+    }
+
+    if (!vote_guard.register_address(address))
+    {
+      fail_func(make_result(votes).ref());
+      return;
+    }
+
+    ++votes[vote];
+    success_func(make_result(votes).ref());
+  }
 };
 
-FlatBufferWrapper make_result(PollData::votes_t& votes)
+template<typename T, template <typename> class H> class VoteGuard
 {
-  return FlatBufferWrapper{
-    [&votes](flatbuffers::FlatBufferBuilder& builder) -> void
-    {
-      const auto result = Strawpoll::CreateResult(
-        builder,
-        builder.CreateVector(votes.data(), votes.size())
-      );
+public:
+  using address_t = T;
+  using hash_t = H<address_t>;
+  using set_t = std::unordered_set<address_t, hash_t>;
 
-      Strawpoll::ResponseBuilder res(builder);
-      res.add_type(Strawpoll::ResponseType_Result);
-      res.add_result(result);
-      builder.Finish(res.Finish());
-    }
-  };
-}
+  VoteGuard() = default;
+
+  VoteGuard(const VoteGuard&) = default;
+  VoteGuard(VoteGuard&&) = default;
+
+  VoteGuard& operator= (const VoteGuard&) = default;
+  VoteGuard& operator= (VoteGuard&&) = default;
+
+  ~VoteGuard() = default;
+
+  bool register_address(const address_t& address)
+  {
+    return set_.insert(address).second;
+  }
+
+private:
+  set_t set_;
+};
+
+struct EmptyAddress {};
+struct HippieVoteGuard
+{
+  using address_t = EmptyAddress;
+
+  bool register_address(const address_t&) { return true; }
+};
