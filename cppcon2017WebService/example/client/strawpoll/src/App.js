@@ -207,7 +207,7 @@ class StrawPoll extends React.Component {
   }
 
   updatePoll = (poll) => {
-    console.log("updatePoll called ", this.state);
+    //console.log("updatePoll called ", this.state);
     this.setState((prevState) => ({
       title: poll.title(),
       options: Array.apply(null, { length: poll.optionsLength() })
@@ -219,7 +219,7 @@ class StrawPoll extends React.Component {
   }
 
   updateResult = (result) => {
-    console.log("updateResult called ", this.state);
+    //console.log("updateResult called ", this.state);
     this.setState((prevState) => ({
       hasVoted: true,
       options: Array.apply(null, { length: result.votesLength() })
