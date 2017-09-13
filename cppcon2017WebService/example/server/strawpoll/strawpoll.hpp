@@ -15,13 +15,10 @@ int foo() {
 
 struct FlatBufferRef
 {
-  // should be invoke_result
-  using ptr_t = decltype(
-    std::declval<flatbuffers::FlatBufferBuilder>().GetBufferPointer()
-  );
+  using ptr_t = const uint8_t*;
 
   ptr_t data;
-  size_t size;
+  const size_t size;
 
   constexpr FlatBufferRef(ptr_t d, size_t s) noexcept : data(d), size(s) {}
 };
@@ -29,27 +26,33 @@ struct FlatBufferRef
 class FlatBufferWrapper
 {
 public:
-  template<typename Func> explicit FlatBufferWrapper(Func&& func)
-    : builder_(1024)
+  template<
+    typename Func,
+    typename = std::enable_if_t<
+      !std::is_same_v<std::decay_t<Func>, FlatBufferWrapper>
+    >
+  > explicit FlatBufferWrapper(Func&& func)
   {
-    func(builder_);
+    flatbuffers::FlatBufferBuilder builder;
+    func(builder);
+    buffer_ = builder.Release();
   }
 
-  FlatBufferWrapper(const FlatBufferWrapper&) = default;
+  FlatBufferWrapper(const FlatBufferWrapper&) = delete;
   FlatBufferWrapper(FlatBufferWrapper&&) = default;
 
-  FlatBufferWrapper& operator=(const FlatBufferWrapper&) = default;
-  FlatBufferWrapper& operator=(FlatBufferWrapper&&) = default;
+  FlatBufferWrapper& operator= (const FlatBufferWrapper&) = delete;
+  FlatBufferWrapper& operator= (FlatBufferWrapper&& other) = default;
 
   ~FlatBufferWrapper() = default;
 
   constexpr FlatBufferRef ref() const noexcept
   {
-    return { builder_.GetBufferPointer(), builder_.GetSize() };
+    return { buffer_.data(), buffer_.size() };
   }
 
 private:
-  flatbuffers::FlatBufferBuilder builder_;
+  flatbuffers::DetachedBuffer buffer_;
 };
 
 template<typename T, size_t N> FlatBufferWrapper make_msg(T (&msg)[N])
@@ -57,9 +60,11 @@ template<typename T, size_t N> FlatBufferWrapper make_msg(T (&msg)[N])
   return FlatBufferWrapper{
     [&msg](flatbuffers::FlatBufferBuilder& builder) -> void
     {
+      const auto error = builder.CreateString(msg);
+
       Strawpoll::ResponseBuilder res(builder);
       res.add_type(Strawpoll::ResponseType_Error);
-      res.add_error(builder.CreateString(msg));
+      res.add_error(error);
       builder.Finish(res.Finish());
     }
   };
@@ -97,12 +102,23 @@ FlatBufferWrapper make_result(PollDetail::votes_t& votes)
   };
 }
 
-template<typename T> struct PollData : public PollDetail
+template<typename T> class PollData : public PollDetail
 {
-  votes_t votes{};
-
+public:
   using vote_guard_t = T;
   vote_guard_t vote_guard;
+
+  FlatBufferWrapper result;
+
+  explicit PollData() : result{make_result(votes_)} {}
+
+  PollData(const PollData&) = delete;
+  PollData(PollData&&) = default;
+
+  PollData& operator= (const PollData&) = delete;
+  PollData& operator= (PollData&&) = default;
+
+  ~PollData() = default;
 
   const FlatBufferWrapper poll_response{
     [&title = title, &options = options](
@@ -135,11 +151,11 @@ template<typename T> struct PollData : public PollDetail
   };
   ErrorResponses error_responses{};
 
-  template<typename FailFunc, typename SuccessFunc> void register_vote(
+  template<typename FF, typename SF> void register_vote(
     const vote_t vote,
     const typename vote_guard_t::address_t& address,
-    FailFunc&& fail_func,
-    SuccessFunc&& success_func
+    FF&& fail_func,
+    SF&& success_func
   )
   {
     if (
@@ -152,13 +168,17 @@ template<typename T> struct PollData : public PollDetail
 
     if (!vote_guard.register_address(address))
     {
-      fail_func(make_result(votes).ref());
+      fail_func(result.ref());
       return;
     }
 
-    ++votes[vote];
-    success_func(make_result(votes).ref());
+    ++votes_[vote];
+    result = make_result(votes_);
+    success_func(result.ref());
   }
+
+private:
+  votes_t votes_{};
 };
 
 template<typename T, template <typename> class H> class VoteGuard
@@ -193,9 +213,9 @@ private:
 };
 
 struct EmptyAddress {};
-struct HippieVoteGuard
+template<typename T> struct HippieVoteGuard
 {
-  using address_t = EmptyAddress;
+  using address_t = T;
 
   bool register_address(const address_t&) { return true; }
   bool has_voted(const address_t&) { return false; }
