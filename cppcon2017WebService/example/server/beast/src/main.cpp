@@ -16,6 +16,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/functional/hash.hpp>
 //#include <boost/asio/buffers_iterator.hpp>
 //#include <cstdlib>
@@ -25,6 +26,7 @@
 #include <thread>
 
 #include <array>
+#include <unordered_map>
 #include <strawpoll.hpp>
 
 using tcp = boost::asio::ip::tcp;               // from <boost/asio/ip/tcp.hpp>
@@ -48,134 +50,377 @@ namespace detail
       return boost::hash_value(v.to_string());
     }
   };
-}
 
-void sendResponse(
-  websocket::stream<tcp::socket>& ws,
-  const FlatBufferRef buffer
-) {
-  ws.binary(true);
-  ws.write(std::array<boost::asio::const_buffer, 1>{{
-    { buffer.data, buffer.size }
-  }});
-}
+  template<typename T, typename M> class member_func_ptr_closure
+  {
+  public:
+    using obj_ptr_t = T*;
+    using member_func_ptr_t = M;
 
-void broadcastResponse(
-  websocket::stream<tcp::socket>& ws,
-  const FlatBufferRef buffer
-) {
-  ws.binary(true);
-  ws.write(std::array<boost::asio::const_buffer, 1>{{
-    { buffer.data, buffer.size }
-  }});
+    constexpr member_func_ptr_closure(
+      obj_ptr_t obj_ptr,
+      member_func_ptr_t member_func_ptr
+    ) noexcept
+      : obj_ptr_{obj_ptr}, member_func_ptr_{member_func_ptr}
+    {}
+
+    template<typename... Args> auto operator() (Args&&... args)
+    {
+      return ((obj_ptr_)->*(member_func_ptr_))(std::forward<Args>(args)...);
+    }
+
+  private:
+    obj_ptr_t obj_ptr_;
+    member_func_ptr_t member_func_ptr_;
+  };
+
+  namespace conv
+  {
+    boost::asio::const_buffer m_b(FlatBufferRef buffer)
+    {
+      return { buffer.data, buffer.size };
+    }
+  }
+} // namespace detail
+
+//using poll_data_t = PollData<VoteGuard<boost::asio::ip::address, detail::hash>>;
+using poll_data_t = PollData<HippieVoteGuard<boost::asio::ip::address>>;
+
+// Report a failure
+void fail(boost::system::error_code ec, char const* what)
+{
+    std::cerr << what << ": " << ec.message() << "\n";
 }
 
 // Echoes back all received WebSocket messages
-template<typename T> void do_session(
-  tcp::socket&& socket,
-  PollData<T>& poll_data
-) {
-  try
+template<typename FC, typename FB> class session
+{
+public:
+  // Take ownership of the socket
+  explicit session(
+    tcp::socket&& socket,
+    boost::asio::ip::address address,
+    FC on_close,
+    FB broadcast,
+    size_t session_id,
+    poll_data_t& poll_data
+  )
+      : ws_{std::move(socket)}
+      , address_{address}
+      , strand_{ws_.get_io_service()}
+      , read_in_process_{false}
+      , write_in_process_{false}
+      , on_close_{on_close}
+      , broadcast_{broadcast}
+      , session_id_{session_id}
+      , poll_data_{poll_data}
   {
-    // Construct the stream by moving in the socket
-    //socket.binary
-    const auto address = socket.remote_endpoint().address();
-    websocket::stream<tcp::socket> ws{std::move(socket)};
+    ws_.binary(true); // we'll only write binary
 
     // Accept the websocket handshake
-    ws.accept();
+    ws_.async_accept(
+        strand_.wrap([this](boost::system::error_code ec) { on_accept(ec); })
+    );
+  }
 
-    for(;;)
-    {
-      // This buffer will hold the incoming message
-      boost::beast::multi_buffer buffers;
-      ws.read(buffers);
+  session(const session&) = delete;
+  session(session&&) = default;
 
-      for (const auto buffer : buffers.data())
-      {
-        const auto ok = flatbuffers::Verifier(
-          boost::asio::buffer_cast<const uint8_t*>(buffer),
-          boost::asio::buffer_size(buffer)
-        ).VerifyBuffer<Strawpoll::Request>(nullptr);
+  session& operator= (const session&) = delete;
+  session& operator= (session&&) = default;
 
-        if (!ok) {
-          sendResponse(ws, poll_data.error_responses.invalid_message.ref());
-          return;
-        }
+  ~session() = default;
 
-        const auto request = flatbuffers::GetRoot<Strawpoll::Request>(
-          boost::asio::buffer_cast<const uint8_t*>(buffer)
-        );
+  void add_message(FlatBufferRef br)
+  {
+    if (
+      std::is_same_v<
+        poll_data_t::vote_guard_t,
+        HippieVoteGuard<boost::asio::ip::address>
+      > || poll_data_.vote_guard.has_voted(address_)
+    )
+      message_queue_.push_back(detail::conv::m_b(br));
+  }
 
-        switch(request->type())
+  void flush_message_queue()
+  {
+    if (write_in_process_) return;
+
+    if (message_queue_.empty()) return;
+
+    ws_.async_write(
+      std::array<boost::asio::const_buffer, 1>{{
+        std::move(message_queue_.back())
+      }},
+      strand_.wrap(
+        [this](boost::system::error_code ec, size_t bytes_transferred)
         {
-          case Strawpoll::RequestType_Poll:
-            if (poll_data.vote_guard.has_voted(address))
-              sendResponse(ws, make_result(poll_data.votes).ref());
-
-            sendResponse(ws, poll_data.poll_response.ref());
-            break;
-          case Strawpoll::RequestType_Result:
-            poll_data.register_vote(
-              request->vote(),
-              address,
-              [&ws](const FlatBufferRef br) { sendResponse(ws, br); },
-              [&ws](const FlatBufferRef br) { broadcastResponse(ws, br); }
-            );
-            break;
-          default:
-            sendResponse(ws, poll_data.error_responses.invalid_type.ref());
+          write_in_process_ = false;
+          on_write(ec, bytes_transferred);
         }
+      )
+    );
+
+    write_in_process_ = true;
+    message_queue_.pop_back();
+  }
+
+private:
+  websocket::stream<tcp::socket> ws_;
+  boost::asio::ip::address address_;
+  boost::asio::io_service::strand strand_;
+  boost::beast::multi_buffer buffer_;
+  std::vector<boost::asio::const_buffer> message_queue_;
+  bool read_in_process_;
+  bool write_in_process_;
+  FC on_close_;
+  FB broadcast_;
+  size_t session_id_;
+  poll_data_t& poll_data_;
+
+  void on_accept(boost::system::error_code ec)
+  {
+    if (ec) return fail(ec, "accept");
+
+    // Read a message
+    do_read();
+  }
+
+  void do_read()
+  {
+    if (read_in_process_) return;
+    // Clear the buffer
+    buffer_.consume(buffer_.size());
+
+    // Read a message into our buffer
+    ws_.async_read(
+      buffer_,
+      strand_.wrap(
+        [this](boost::system::error_code ec, size_t bytes_transferred)
+        {
+          read_in_process_ = false;
+          on_read(ec, bytes_transferred);
+        }
+      )
+    );
+    read_in_process_ = true;
+  }
+
+  void on_read(
+    boost::system::error_code ec,
+    size_t bytes_transferred
+  ) {
+    boost::ignore_unused(bytes_transferred);
+
+    // This indicates that the session was closed
+    if (ec == websocket::error::closed)
+    {
+      on_close_(session_id_);
+      return;
+    }
+
+    if (ec) fail(ec, "read");
+
+    build_responses();
+    flush_message_queue();
+  }
+
+  void on_write(
+    boost::system::error_code ec,
+    size_t// bytes_transferred
+  ) {
+    //boost::ignore_unused(bytes_transferred);
+
+    if (ec) return fail(ec, "write");
+
+    if (!message_queue_.empty())
+    {
+      flush_message_queue();
+      return;
+    }
+
+    // Do another read
+    do_read();
+  }
+
+  void build_responses()
+  {
+    const auto add_response = [&queue = message_queue_](FlatBufferRef br)
+    {
+      queue.push_back(detail::conv::m_b(br));
+    };
+
+    for (const auto buffer : buffer_.data())
+    {
+      const auto ok = flatbuffers::Verifier(
+        boost::asio::buffer_cast<const uint8_t*>(buffer),
+        boost::asio::buffer_size(buffer)
+      ).VerifyBuffer<Strawpoll::Request>(nullptr);
+
+      if (!ok) {
+        add_response(poll_data_.error_responses.invalid_message.ref());
+        continue;
+      }
+
+      const auto request = flatbuffers::GetRoot<Strawpoll::Request>(
+        boost::asio::buffer_cast<const uint8_t*>(buffer)
+      );
+
+      switch(request->type())
+      {
+        case Strawpoll::RequestType_Poll:
+          if (poll_data_.vote_guard.has_voted(address_))
+            add_response(poll_data_.result.ref());
+
+          add_response(poll_data_.poll_response.ref());
+          break;
+        case Strawpoll::RequestType_Result:
+          poll_data_.register_vote(
+            request->vote(),
+            address_,
+            add_response,
+            [&broadcast = broadcast_](FlatBufferRef br) { broadcast(br); }
+          );
+          break;
+        default:
+          add_response(poll_data_.error_responses.invalid_type.ref());
       }
     }
   }
-  catch(const boost::system::system_error& se)
+};
+
+// Accepts incoming connections and launches the sessions
+class listener
+{
+public:
+  void on_session_close(size_t session_id)
   {
-      // This indicates that the session was closed
-      if(se.code() != websocket::error::closed)
-        std::cerr << "Error: " << se.code().message() << std::endl;
+    sessions_.erase(session_id);
   }
-  catch(const std::exception& e)
+
+  void broadcast(FlatBufferRef br)
   {
-    std::cerr << "Error: " << e.what() << std::endl;
+    for (auto& [key, session] : sessions_)
+    {
+      session.add_message(br);
+      session.flush_message_queue();
+    }
   }
-}
+
+  using on_session_close_t = detail::member_func_ptr_closure<
+    listener,
+    decltype(&listener::on_session_close)
+  >;
+  using broadcast_t = detail::member_func_ptr_closure<
+    listener,
+    decltype(&listener::broadcast)
+  >;
+
+  using session_t = session<on_session_close_t, broadcast_t>;
+  using sessions_t = std::unordered_map<size_t, session_t>;
+
+  explicit listener(
+      boost::asio::io_service& ios,
+      tcp::endpoint endpoint)
+      : strand_{ios}
+      , acceptor_{ios}
+      , socket_{ios}
+      , session_id_counter_{}
+      , on_session_close_{this, &listener::on_session_close}
+      , broadcast_{this, &listener::broadcast}
+      , poll_data_{}
+  {
+    boost::system::error_code ec;
+
+    // Open the acceptor
+    acceptor_.open(endpoint.protocol(), ec);
+    if (ec)
+    {
+      fail(ec, "open");
+      return;
+    }
+
+    // Bind to the server address
+    acceptor_.bind(endpoint, ec);
+    if (ec)
+    {
+      fail(ec, "bind");
+      return;
+    }
+
+    // Start listening for connections
+    acceptor_.listen(boost::asio::socket_base::max_connections, ec);
+    if (ec)
+    {
+      fail(ec, "listen");
+      return;
+    }
+
+    if (! acceptor_.is_open()) return;
+    do_accept();
+  }
+
+  listener(const listener&) = delete;
+  listener(listener&&) = default;
+
+  listener& operator= (const listener&) = delete;
+  listener& operator= (listener&&) = default;
+
+  ~listener() = default;
+
+  void do_accept()
+  {
+    acceptor_.async_accept(
+      socket_,
+      strand_.wrap([this](boost::system::error_code ec) { on_accept(ec); })
+    );
+  }
+
+  void on_accept(boost::system::error_code ec)
+  {
+    if (ec)
+    {
+      fail(ec, "accept");
+    }
+    else
+    {
+      // Create the session and run it
+      const auto address = socket_.remote_endpoint().address();
+      sessions_.try_emplace(
+        session_id_counter_,
+        std::move(socket_),
+        std::move(address),
+        on_session_close_,
+        broadcast_,
+        session_id_counter_,
+        poll_data_
+      );
+      ++session_id_counter_;
+    }
+
+    // Accept another connection
+    do_accept();
+  }
+
+private:
+  boost::asio::io_service::strand strand_;
+  tcp::acceptor acceptor_;
+  tcp::socket socket_;
+  size_t session_id_counter_;
+  on_session_close_t on_session_close_;
+  broadcast_t broadcast_;
+  sessions_t sessions_;
+  poll_data_t poll_data_;
+};
 
 //------------------------------------------------------------------------------
 
 int main()
 {
-  try
-  {
-    PollData<VoteGuard<boost::asio::ip::address, detail::hash>> poll_data{};
+  const auto address = boost::asio::ip::address::from_string("127.0.0.1");
+  const auto port = static_cast<unsigned short>(3003);
 
-    const auto address = boost::asio::ip::address::from_string("127.0.0.1");
-    const auto port = static_cast<unsigned short>(std::atoi("3003"));
-
-    // The io_service is required for all I/O
-    boost::asio::io_service ios{1};
-
-    // The acceptor receives incoming connections
-    tcp::acceptor acceptor{ios, {address, port}};
-    for(;;)
-    {
-      // This will receive the new connection
-      tcp::socket socket{ios};
-
-      // Block until we get a connection
-      acceptor.accept(socket);
-      // Launch the session, transferring ownership of the socket
-      std::thread{
-        [sock = std::move(socket), &poll_data]() mutable
-        {
-          do_session(std::move(sock), poll_data);
-        }
-      }.detach();
-    }
-  }
-  catch (const std::exception& e)
-  {
-    std::cerr << "Error: " << e.what() << std::endl;
-    return EXIT_FAILURE;
-  }
+  boost::asio::io_service ios{1};
+  listener lis{ios, tcp::endpoint{address, port}};
+  ios.run(); // blocking
 }
