@@ -84,7 +84,7 @@ ResultBar.propTypes = {
 
 function BarChart(props) {
   // FIXME talk about shalow copy and sorting as weird for a c++ user
-  const options = props.options.slice().sort((a, b) => (a.votes < b.votes));
+  const options = props.options.slice().sort((a, b) => (b.votes - a.votes));
 
   const total = options.reduce((sum, an) => (sum + an.votes), 0);
   return (
