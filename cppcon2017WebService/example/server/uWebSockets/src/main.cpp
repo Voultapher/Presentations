@@ -6,7 +6,7 @@
 
 void sendResponse(
   uWS::WebSocket<uWS::SERVER>* ws,
-  const FlatBufferRef buffer
+  FlatBufferRef buffer
 ) {
   ws->send(
     reinterpret_cast<const char*>(buffer.data),
@@ -17,7 +17,7 @@ void sendResponse(
 
 void broadcastResponse(
   uWS::Hub& h,
-  const FlatBufferRef buffer
+  FlatBufferRef buffer
 ) {
   h.getDefaultGroup<uWS::SERVER>().broadcast(
     reinterpret_cast<const char*>(buffer.data),
@@ -59,8 +59,8 @@ int main()
         poll_data.register_vote(
           request->vote(),
           {},
-          [&ws](const FlatBufferRef br) { sendResponse(ws, br); },
-          [&h](const FlatBufferRef br) { broadcastResponse(h, br); }
+          [&ws](FlatBufferRef br) { sendResponse(ws, br); },
+          [&h](FlatBufferRef br) { broadcastResponse(h, br); }
         );
         break;
       default:
