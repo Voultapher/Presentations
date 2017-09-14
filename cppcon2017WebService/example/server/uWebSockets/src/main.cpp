@@ -30,7 +30,7 @@ int main()
 {
   std::cout << "Sever starting up...\n";
 
-  PollData<HippieVoteGuard> poll_data{};
+  PollData<HippieVoteGuard<EmptyAddress>> poll_data{};
 
   uWS::Hub h;
 
