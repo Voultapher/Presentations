@@ -137,7 +137,9 @@ public:
       std::is_same_v<
         poll_data_t::vote_guard_t,
         HippieVoteGuard<boost::asio::ip::address>
-      > || poll_data_.vote_guard.has_voted(address_)
+      >
+      || !write_in_process_ // write should always write the most recent
+      || poll_data_.vote_guard.has_voted(address_)
     )
       message_queue_.push_back(detail::conv::m_b(br));
   }
@@ -269,10 +271,10 @@ private:
       switch(request->type())
       {
         case Strawpoll::RequestType_Poll:
-          if (poll_data_.vote_guard.has_voted(address_))
-            add_response(poll_data_.result.ref());
-
           add_response(poll_data_.poll_response.ref());
+
+          if (poll_data_.vote_guard.has_voted(address_))
+            add_response(poll_data_.result_ref());
           break;
         case Strawpoll::RequestType_Result:
           poll_data_.register_vote(
