@@ -152,15 +152,35 @@ class StrawPoll extends React.Component {
       title: '',
       options: []
     };
+
   }
 
   componentDidMount() {
     this.setupWebSocketCommunication();
+    this.stress_test(250);
   }
 
   shouldComponentUpdate(nextProps, nextState) {
     return nextState.options.length > 0
       && nextState.options[0].text !== undefined;
+  }
+
+  stress_test(count) {
+    this.sockets = [];
+    for (let i = 0; i < count; i++) {
+      this.sockets.push(new WebSocket(this.props.apiUrl));
+      this.sockets[i].binaryType = 'arraybuffer';
+
+      this.sockets[i].addEventListener('open', (event) => {
+        const builder = new flatbuffers.Builder(1024);
+        Strawpoll.Request.startRequest(builder);
+        Strawpoll.Request.addType(builder, Strawpoll.RequestType.Result);
+        Strawpoll.Request.addVote(builder, builder.createLong(1));
+        builder.finish(Strawpoll.Request.endRequest(builder));
+
+        this.sockets[i].send(builder.asUint8Array());
+      });
+    }
   }
 
   setupWebSocketCommunication() {
@@ -266,7 +286,7 @@ class App extends React.Component {
   render() {
     return (
       <div className="App">
-        <StrawPoll apiUrl={'ws://45.55.173.32:3003'} />
+        <StrawPoll apiUrl={'ws://localhost:3003'} />
       </div>
     );
   }
