@@ -18,12 +18,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/functional/hash.hpp>
-//#include <boost/asio/buffers_iterator.hpp>
-//#include <cstdlib>
-//#include <functional>
 #include <iostream>
-#include <string>
-#include <thread>
 
 #include <array>
 #include <unordered_map>
@@ -119,7 +114,7 @@ public:
 
     // Accept the websocket handshake
     ws_.async_accept(
-        strand_.wrap([this](boost::system::error_code ec) { on_accept(ec); })
+      strand_.wrap([this](boost::system::error_code ec) { on_accept(ec); })
     );
   }
 
@@ -358,7 +353,7 @@ public:
       return;
     }
 
-    if (! acceptor_.is_open()) return;
+    if (!acceptor_.is_open()) return;
     do_accept();
   }
 
