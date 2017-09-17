@@ -6,22 +6,30 @@ import { Strawpoll } from './strawpoll_generated.js';
 
 import './App.css';
 
+function printWrap(val) {
+  console.log("val: ", val);
+  return val;
+}
+
+function uOr(val, fn) {
+  return val === undefined
+    ? undefined
+    : fn(val);
+}
+
 function ResultDescription(props) {
   return (
-    <div style={{ marginBottom: 4, overflow: 'hidden' }}>
-      <div style={{ float: 'left' }}>{props.text}</div>
-      <div style={{ float: 'right', fontSize: '0.8em', paddingRight: '0.5em'}}>
-        {props.percent.toFixed(2)}%
-        ({props.votes} votes)
-      </div>
+    <div
+      style={{ marginBottom: 4, overflow: 'hidden' }}
+      className={'ResultDescription'}
+    >
+      {props.text}
     </div>
   );
 }
 
 ResultDescription.propTypes = {
-  text: PropTypes.string.isRequired,
-  percent: PropTypes.number.isRequired,
-  votes: PropTypes.number.isRequired
+  text: PropTypes.string.isRequired
 };
 
 const barColorsA = [ // eslint-disable-line no-unused-vars
@@ -49,24 +57,34 @@ const barColorsC = [ // eslint-disable-line no-unused-vars
 
 function ResultBar(props) {
   return (
-    <div className={'ResultBar'}>
+    <div className={'ResultBar'} style={{ position: 'relative' }}>
       <div style={{
         width: `${props.width.toFixed(2)}%`,
         height: '100%',
         backgroundColor: props.barColor
       }} />
+      <div style={{
+        position: 'absolute',
+        top: '0.35em',
+        right: '0.5em'
+      }}>
+        {props.percent.toFixed(0)}%
+        ({props.votes} votes)
+      </div>
     </div>
   );
 }
 
 ResultBar.propTypes = {
   width: PropTypes.number.isRequired,
-  barColor: PropTypes.string.isRequired
+  barColor: PropTypes.string.isRequired,
+  percent: PropTypes.number.isRequired,
+  votes: PropTypes.number.isRequired
 };
 
 function BarChart(props) {
   // FIXME talk about shalow copy and sorting as weird for a c++ user
-  const options = props.options.slice().sort((a, b) => (a.votes < b.votes));
+  const options = props.options.slice().sort((a, b) => (b.votes - a.votes));
 
   const total = options.reduce((sum, an) => (sum + an.votes), 0);
   return (
@@ -77,17 +95,17 @@ function BarChart(props) {
           <div key={an.text} style={{ paddingBottom: '1em' }}>
             <ResultDescription
               text={an.text}
-              percent={width}
-              votes={an.votes}
             />
             <ResultBar
               width={width}
               barColor={props.barColors[i % props.barColors.length]}
+              percent={width}
+              votes={an.votes}
             />
           </div>
         );
       })}
-      <span style={{ fontSize: '0.9em' }}>Total Votes: {total}</span>
+      Total Votes: <span style={{ fontWeight: 600 }}>{total}</span>
     </div>
   );
 }
@@ -138,6 +156,11 @@ class StrawPoll extends React.Component {
 
   componentDidMount() {
     this.setupWebSocketCommunication();
+  }
+
+  shouldComponentUpdate(nextProps, nextState) {
+    return nextState.options.length > 0
+      && nextState.options[0].text !== undefined;
   }
 
   setupWebSocketCommunication() {
@@ -191,20 +214,24 @@ class StrawPoll extends React.Component {
   }
 
   updatePoll = (poll) => {
-    this.setState({
+    //console.log("updatePoll called ", this.state);
+    this.setState((prevState) => ({
       title: poll.title(),
       options: Array.apply(null, { length: poll.optionsLength() })
       .map((v, i) => ({
-        text: poll.options(i)
+        text: poll.options(i),
+        votes: uOr(prevState.options[i], (op) => (op.votes))
       }))
-    });
+    }));
   }
 
   updateResult = (result) => {
+    //console.log("updateResult called ", this.state);
     this.setState((prevState) => ({
       hasVoted: true,
-      options: prevState.options.map((option, i) => ({
-        text: option.text,
+      options: Array.apply(null, { length: result.votesLength() })
+      .map((v, i) => ({
+        text: uOr(prevState.options[i], (op) => (op.text)),
         votes: result.votes(i).toFloat64()
       }))
     }));
@@ -239,7 +266,7 @@ class App extends React.Component {
   render() {
     return (
       <div className="App">
-        <StrawPoll apiUrl={'ws://localhost:3003'} />
+        <StrawPoll apiUrl={'ws://45.55.173.32:3003'} />
       </div>
     );
   }

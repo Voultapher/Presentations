@@ -3,17 +3,22 @@
   margin: 1em;
   padding: 1em;
 
-  font-size: 1.2em;
+  font-size: 1em;
   color: #444;
   background-color: #fff;
 
   box-shadow: rgba(0, 0, 0, 0.12) 0px 1px 6px, rgba(0, 0, 0, 0.12) 0px 1px 4px;
 }
 
+.ResultDescription {
+  font-weight: 600;
+}
+
 .ResultBar {
   outline: 1px solid #ccc;
   background-color: #eee;
-  height: 1em;
+  height: 1.7em;
+  margin-bottom: 0.3em;
 }
 
 
@@ -22,7 +27,7 @@ h1 {
 }
 
 li {
-  margin-bottom: 1em;
+  margin-bottom: 1.5em;
 }
 
 button {
@@ -30,13 +35,14 @@ button {
     border: none;
     border-radius: 2px;
     color: white;
-    padding: 0.5em 1em;
+    padding: 0.7em 1em;
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 0.9em;
+    font-size: 1em;
     font-weight: 600;
     cursor: pointer;
+    width: 100%;
 }
 
 button:hover {
