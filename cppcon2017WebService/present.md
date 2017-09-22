@@ -19,7 +19,7 @@ httpd.serve_forever()
 
 Note:
 - If all you want to do, is serve static content,
-than those 5 lines of python, >> will most likely be enough. **5s**
+than those 5 lines of python, TODO explain >> will most likely be enough. **5s**
 - Hosting something like a blog, doesn't need to be complicated. >>
 
 ---
@@ -53,7 +53,7 @@ on the vast majority of todays consumer platforms >>
 
 Note:
 - That leads us into web development
-- I want to take some time, and talk about the advantage and challenges,
+- I want to take some time, and talk about the advantages and challenges,
 of modern web development. Coming from a C++ background.
 
 ---
@@ -75,7 +75,7 @@ that is C++ tooling. The feeling of just writing the word `debugger;`
 in your code. Followed by a sane, intuitive debugging experience
 inside your browser. Is a welcome breath of fresh air, after years of
 fighting tools to achieve, seemingly simple goals.
-And all that without having installed anything special. And your browser >>
+And all that without having installed anything special. >>
 - Frameworks: React, Angular, you name it. These days there a so many,
 that sites like todomvc exist. >>
 
@@ -119,9 +119,9 @@ After editing your source files. >>
 You compile to javascript of a target ECMAScript version, and plain css.
 
 The ES version usually dictates browser support.
-However even older browsers can be support modern features,
+However even older browsers can support modern features,
 with the help of polyfills. Polyfills try to emulate missing,
-language or library features.
+language or library features.  
 Usually they first check if there is native support.
 
 With javascript you have the unique problem, you need to send source code
@@ -130,7 +130,7 @@ So there is a notable advantage of shorter variable names and no whitespace.
 Of course we don't want source code where all variables have single character
 names. >>
 
-That's the step where we use a tool to uglify our code.
+Now comes the step where we use a tool to uglify our code.
 The name says it all. It makes our code more ugly. A popular choice is
 UglifyJS. A parser with the goal, of producing the shortest possible javascript,
 whilst retaining the same logic.
@@ -202,7 +202,6 @@ We'll use a websocket library.
 I want to compare 3 popular open source choices. >>
 - Beast, >> uWebSockets >> and IncludeOS
 - We'll compare their interfaces,
-- their build requirements,
 - the code needed for our example service,
 - attack vectors,
 - common causes of bugs
@@ -250,6 +249,7 @@ h.run();
 ```
 
 Note:
+- The setup is easy and straight forward.
 - Construct hub
 - Attach request handler
 - Bind to port
@@ -333,7 +333,7 @@ table Request {
 
 Note:
 - Here you see the entire schema for our user requests.
-- Flatbuffers support pods, structs, enums, unions and tables.
+- Flatbuffers supports pods, structs, enums, unions and tables.
 - In this case all we need is a type variable representing the request type,
 and optionally a vote.
 
@@ -359,7 +359,7 @@ Note:
 - we need a websocket,
 - the message pointer and size, here wrapped with `FlatBufferRef`
 - This call is synchronous. That means this function will return once the
-message was sent.
+message was sent. TODO look up
 
 ---
 
@@ -439,7 +439,7 @@ Note:
 However it has been implemented in nearly every browser by now.
 - Giving us 93% of the global webbrowser users. >>
 - And we need support for our choice of serialization language.
-- FlatBuffer currently ships with bindings for 8 languages,
+- FlatBuffers currently ships with bindings for 8 languages,
 including javascript.
 
 ---
@@ -463,10 +463,10 @@ Note:
 - First we create a new WebSocket.
 - Set it's binary type to arraybuffer and then add our EventListeners.
 - A WebSocket connections usually has 3 event types.
-- `open` the event triggered once the http request upgrade,
+- `open`, the event triggered once the http request upgrade,
 and handshake were successful.
-- `message` the event triggered each time the server sends a message
-- `close` the event triggered by the either the server sending a close frame,
+- `message`, the event triggered each time the server sends a message
+- `close`, the event triggered by the either the server sending a close frame,
 or a failed ping pong request. >>
 
 ---
@@ -527,8 +527,8 @@ server->listen(3003);
 ```
 
 Note:
-- First we include the relevant os components.
-- Retrieve a reference to the os internal network stack.
+- First we include the relevant OS components.
+- Retrieve a reference to the OS internal network stack.
 - Attach our request_handler and bind to our port. >>
 
 ---
@@ -606,6 +606,10 @@ We'll learn how to implement it once we look at the Beast example. >>
 
 ## Beast
 
+Note:
+- Part of upcoming boost versions, Beast is by the lowest level library of
+the 3.
+
 ---
 
 ### Setup
@@ -623,6 +627,8 @@ ios.run();
 
 Note:
 - Setting up a Beast server seems harmless enough.
+- A couple of includes, creating the io_services subscribing our events,
+and starting the event loop.
 - Let's look at listener, implemented by us. >>
 
 ---
@@ -631,7 +637,7 @@ Note:
 
 Note:
 - To recap the event loop model,
-let's first take a quick look at the synchronous Beast example. >>
+let's first take a quick look at a synchronous Beast example. >>
 
 ---
 
@@ -652,7 +658,7 @@ for(;;)
 ```
 
 Note:
-- Each time we create a new tcp socket.
+- In our top level loop, each time we create a new tcp socket.
 - `accept` should block until we get a connection.
 - Once we have a new session, we spawn a worker thread and
 transfer ownership of the socket. >>
@@ -726,7 +732,8 @@ void foo() { bar(); }
 ```
 
 Note:
-- This has the advantage, that we can now suspend one part of our function.
+- Using a cyclical call graph,
+has the advantage, that we can now suspend one part of our loop.
 - With that, let's take a look at the actual Beast example. >>
 
 ---
@@ -801,7 +808,9 @@ explicit session(tcp::socket&& socket)
 Note:
 - This should look familiar.
 - It's basically the same as the `listener` constructor.
-- It kick starts the session event loop. >>
+- It kick starts the session event loop.
+- The session event loop is more elaborate,
+so I've split it into it's 3 core components. >>
 
 ---
 
@@ -826,8 +835,12 @@ void do_read()
 ```
 
 Note:
-- After clearing our target buffer we subscribe a read operation
-- Once the read is completed our handler should be called. >>
+- This the reading part of our event loop.
+- After clearing our target buffer, we subscribe a read operation.
+- Once the read is completed our handler should be called.
+- In this case, `on_read`
+- Note that Beast and Asio use the much faster error code pattern,
+instead of exceptions. >>
 
 ---
 
@@ -909,27 +922,6 @@ this presentation.
 
 ---
 
-Note who Beast and Asio use the much faster system error codes instead of exceptions.
----
-
-### Asynchronous Primitives
-
----
-
-### Socket library
-
----
-
-### Ip Stack
-
-- We'll compare their interfaces, DONE
-- the code needed for our example service, DONE
-- attack vectors,
-- common causes of bugs
-- and of course performance. >>
-
----
-
 ### Example Code Size
 
 * uWebSockets | ~1.6kb
@@ -940,9 +932,11 @@ Note who Beast and Asio use the much faster system error codes instead of except
 <!-- .element: class="fragment" -->
 
 Note:
-- To give you a rough idea about the effort required to use each library.
-ran each
--
+- To give you a rough idea about the effort required to use each library,
+I ran our example implementations through wordcount. >>
+- uWebSockets sits at a comfy 1.6kb. >>
+- IncludeOS isn't far away with roughly 3kb. >>
+- Beast however being a lower level library results in 9kb source code. >>
 
 ---
 
@@ -956,8 +950,9 @@ ran each
 <!-- .element: class="fragment" -->
 
 Note:
+- Let us now compare a big productivity factor, their compile time.
 - Note, the results are the 90 percentile compiled with clang 4. >>
-- uWebSockets is linked as dynamic library, making a breeze to work with. >>
+- uWebSockets is linked as dynamic library, making it a breeze to work with. >>
 - I couldn't get IncludeOS to build as Debug,
 so I measured the default settings. With 90 percent being under 3 seconds,
 still nice to quickly iterate with. >>
@@ -1019,10 +1014,10 @@ like the aforementioned system call.
 
 Note:
 - This is my first time benchmarking a network application,
-take my results with a lot of salt.
+take my results with a bucket of salt.
 - Again the results are the 90 percentile,
 from running uWebSockets scalability test locally.
-- Sadly I didn't manage to benchmark IncludeOS. >>
+- Unfortunately I didn't manage to benchmark IncludeOS. >>
 
 ---
 
@@ -1040,7 +1035,7 @@ Note:
 * Beast: 4.2mb
 
 Note:
-- No big difference here. >>
+- No big difference in terms of user space memory usage. >>
 
 ---
 
