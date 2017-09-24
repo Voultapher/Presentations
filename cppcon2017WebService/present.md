@@ -1,7 +1,41 @@
 # Web | C++
 
 Note:
-- Web and C++. Name a less iconic couple. >>
+- Web and C++, are not an iconic couple.
+- My name is Lukas, and I work as Full Stack software engineer at PPRO.
+- Today we'll try to understand where C++, fits into a modern web service.
+- How did C++ never find widespread adoption in the networking segment?
+A marked dominated by C.
+Both Nodejs and python essentially implement their networking with C.
+- Network applications being prone to malicious input,
+makes this particularly ironic, given C' security track record.
+- The vast majority of recent security breaches,
+boil down to someone blindly calling memcopy.
+- The days where such thing was purely a stylistic faux pax, are truly gone.
+Today, these kinds of bugs have an ever increasing impact on real peoples lives.
+- We all know, modern C++ tries to address many of these historic shortcomings,
+surely this translates to applications?
+- If you got questions, just raise your arm. >>
+
+---
+
+### Roadmap
+
+* Where
+<!-- .element: class="fragment" -->
+* Client
+<!-- .element: class="fragment" -->
+* Server
+<!-- .element: class="fragment" -->
+
+Note:
+- First we'll try to see where a C++ application makes sense. >>
+- Then a quick a look at the client side of a web application. >>
+- And finally, we'll compare implementing an example service,
+using popular C++ libraries. >>
+- I'll assume that you have some knowledge about networking applications,
+and of course, this talk is no definite answer,
+merely my subjective observations. >>
 
 ---
 
@@ -19,7 +53,10 @@ httpd.serve_forever()
 
 Note:
 - If all you want to do, is serve static content,
-than those 5 lines of python, TODO explain >> will most likely be enough. **5s**
+than those 5 lines of python >> will most likely be enough.
+- Import http server from the standard library.
+- Create a socket server listening on a port.
+- And start the event loop.
 - Hosting something like a blog, doesn't need to be complicated. >>
 
 ---
@@ -29,7 +66,7 @@ than those 5 lines of python, TODO explain >> will most likely be enough. **5s**
 Note:
 - In this talk I want to focus on web services.
 - Quoting W3C: A web service is a software system designed to support
-interoperable machine-to-machine interaction over a network.
+interoperable machine-to-machine interaction over a network. >>
 
 ---
 
@@ -52,7 +89,7 @@ on the vast majority of todays consumer platforms >>
 ## Web Development
 
 Note:
-- That leads us into web development
+- That leads us into web development.
 - I want to take some time, and talk about the advantages and challenges,
 of modern web development. Coming from a C++ background.
 
@@ -69,7 +106,7 @@ of modern web development. Coming from a C++ background.
 
 Note:
 - Let's talk about the advantages. >>
-- Feature rich ecosystem, with npm as its backbone. >>
+- Feature rich ecosystem, with npm at its backbone. >>
 - A wide variety of Tools. Coming from the assemble it yourself world,
 that is C++ tooling. The feeling of just writing the word `debugger;`
 in your code. Followed by a sane, intuitive debugging experience
@@ -186,6 +223,19 @@ As you can see this is just a little strawpoll service.
 
 ---
 
+## WebSocket
+<!-- .element: class="fragment" -->
+
+Note:
+- Persitence is easy as soon as you have a server.
+- Bidirectional communication is a little trickier. >>
+- Who of you has heard of WebSockets before?
+- And how many of you have used them in an application?
+- For those new to WebSockets, they are a thin wrapper around TCP,
+introduced by HTML5. >>
+
+---
+
 ### 3 Libraries
 
 * Beast
@@ -204,7 +254,6 @@ I want to compare 3 popular open source choices. >>
 - We'll compare their interfaces,
 - the code needed for our example service,
 - attack vectors,
-- common causes of bugs
 - and of course performance. >>
 
 ---
@@ -219,9 +268,9 @@ I want to compare 3 popular open source choices. >>
 <!-- .element: class="fragment" -->
 
 Note:
-- The 3 main requirements are a: >>
-- request handler.
-Each user request should trigger a call to our request handler function. >>
+- The 3 main requirements are >>
+- a request handler.
+Each user request should trigger a call to our function. >>
 - We want to send a message back to the client websocket. >>
 - And finally, we want to broadcast a message,
 to all open websocket connections. >>
@@ -271,9 +320,9 @@ h.onMessage([&h, &poll_data]( //) md fix
 ```
 
 Note:
-- Each time a user sends a message our request handler should be called with
+- Each time a user sends a message our request handler is called with:
 - The websocket itself
-- A pointer to the message buffer plus its size
+- A pointer to the message buffer, plus its size
 - And the message opcode, usually text or binary
 
 ---
@@ -317,6 +366,10 @@ const auto ok = flatbuffers::Verifier(
 Note:
 - Flatbuffers are usually used with schema representation.
 - A schema allows for more efficient message encoding and also validation.
+- All this make for easy out of the box message validation, as you can see.
+- However this does not validate application logic,
+it can tell us, if a vote is present or not, it doesn't know whether or not
+a vote is in bounds or if that client has already voted. >>
 
 ---
 
@@ -334,8 +387,8 @@ table Request {
 Note:
 - Here you see the entire schema for our user requests.
 - Flatbuffers supports pods, structs, enums, unions and tables.
-- In this case all we need is a type variable representing the request type,
-and optionally a vote.
+- In this case all we need is a type enum representing the request type,
+and optionally a vote. >>
 
 ---
 
@@ -358,8 +411,9 @@ Note:
 - Back to uWebSockets, in order to send a message,
 - we need a websocket,
 - the message pointer and size, here wrapped with `FlatBufferRef`
+- and the opcode.
 - This call is synchronous. That means this function will return once the
-message was sent. TODO look up
+message was sent. >>
 
 ---
 
@@ -384,7 +438,7 @@ Note:
 - `getDefaultGroup()` returns a group object representing all it's open
 connections.
 - Conveniently, this group object provides a method to broadcast a message.
-- The call to `broadcast()` and `send()` share the same signature.
+- The call to `broadcast()` and `send()` share the same signature. >>
 
 ---
 
@@ -420,7 +474,7 @@ we try to register the vote and give it 2 callbacks.
 The first should be triggered if the vote is invalid,
 the second if the vote was registered successfully.
 In our case we want to broadcast the updated vote array.
-- Otherwise we send a error stating an unrecognized request type.
+- Otherwise we send a error stating an unrecognized request type. >>
 
 ---
 
@@ -463,10 +517,10 @@ Note:
 - First we create a new WebSocket.
 - Set it's binary type to arraybuffer and then add our EventListeners.
 - A WebSocket connections usually has 3 event types.
-- `open`, the event triggered once the http request upgrade,
+- `open`, the event triggered once the HTTP request upgrade,
 and handshake were successful.
-- `message`, the event triggered each time the server sends a message
-- `close`, the event triggered by the either the server sending a close frame,
+- `message`, the event triggered each time the server sends a message.
+- `close`, the event triggered by either the server sending a close frame,
 or a failed ping pong request. >>
 
 ---
@@ -501,7 +555,7 @@ Note:
 Note:
 - Let us take a look at our second high level WebSocket library.
 - However IncludeOS is much more than a WebSocket library.
-- Who of you went to Alfred's talk earlier this week?
+- Who of you went to Alfred's talks earlier this week?
 - For those unfamiliar with IncludOS, it's a young unikernel project.
 Which allows you to create applications that are compiled into bootable,
 special purpose operating systems. All the relevant pieces of the OS are
@@ -576,7 +630,7 @@ Note:
 
 - Our request handler will only be triggered each time a connection is
 established. So we still need an event handler for the client messages.
-- This is what a simple echo server could do. >>
+- This is what a simple echo server could look like. >>
 
 ---
 
@@ -597,7 +651,7 @@ void sendResponse(
 
 Note:
 - For those of you thinking they are having a dejavu,
-yes it look very similar to the uWebSockets interface.
+yes sending looks very similar to the uWebSockets interface.
 - Again we write a pointer, size and opcode.
 - IncludeOS does not have native broadcast support.
 We'll learn how to implement it once we look at the Beast example. >>
@@ -607,7 +661,7 @@ We'll learn how to implement it once we look at the Beast example. >>
 ## Beast
 
 Note:
-- Part of upcoming boost versions, Beast is by the lowest level library of
+- Part of upcoming boost versions, Beast is by far the lowest level library of
 the 3.
 
 ---
@@ -627,7 +681,7 @@ ios.run();
 
 Note:
 - Setting up a Beast server seems harmless enough.
-- A couple of includes, creating the io_services subscribing our events,
+- A couple of includes, creating the io_service, subscribing our events,
 and starting the event loop.
 - Let's look at listener, implemented by us. >>
 
@@ -636,8 +690,9 @@ and starting the event loop.
 ## Event Loops
 
 Note:
+- Before we do that, let's first revisit the event loops.
 - To recap the event loop model,
-let's first take a quick look at a synchronous Beast example. >>
+we'll take a quick look at the synchronous Beast example. >>
 
 ---
 
@@ -733,7 +788,9 @@ void foo() { bar(); }
 
 Note:
 - Using a cyclical call graph,
-has the advantage, that we can now suspend one part of our loop.
+has the advantage, that we can suspend one part of our loop.
+And return control back to the caller.
+- Giving our parent event loop the chance to resume, once ready.
 - With that, let's take a look at the actual Beast example. >>
 
 ---
@@ -759,10 +816,11 @@ void do_accept()
 ```
 
 Note:
-- Of course there is a lot of code missing.
+- Of course, to keeps things manageable, there is a lot of code missing.
 - Constructing `listener` starts the event loop.
 - `async_accept` takes a socket reference, to move into and
-a continuation handler. >>
+a continuation handler.
+- Strand is an executor. >>
 
 ---
 
@@ -810,7 +868,8 @@ Note:
 - It's basically the same as the `listener` constructor.
 - It kick starts the session event loop.
 - The session event loop is more elaborate,
-so I've split it into it's 3 core components. >>
+so I've split it into it's 3 core components.
+- This being the start. >>
 
 ---
 
@@ -835,11 +894,11 @@ void do_read()
 ```
 
 Note:
-- This the reading part of our event loop.
+- Here the reading part of our event loop.
 - After clearing our target buffer, we subscribe a read operation.
 - Once the read is completed our handler should be called.
 - In this case, `on_read`
-- Note that Beast and Asio use the much faster error code pattern,
+- Note that async Beast and Asio use the much faster error code pattern,
 instead of exceptions. >>
 
 ---
@@ -888,7 +947,8 @@ Note:
 <!-- .element: class="fragment" -->
 
 Note:
-- Which brings us to the session event chain. >>
+- Ok, all this might seem a little overwhelming.
+- Let's recap the session event chain. >>
 - `on_accpet` calls >> `do_read`, which in turn calls >> `on_read`,
 which calls `do_write`, which calls >> `on_write` which then calls >> `do_read`
 again.
@@ -936,7 +996,7 @@ Note:
 I ran our example implementations through wordcount. >>
 - uWebSockets sits at a comfy 1.6kb. >>
 - IncludeOS isn't far away with roughly 3kb. >>
-- Beast however being a lower level library results in 9kb source code. >>
+- Beast however being a lower level library results in 9kb' of source code. >>
 
 ---
 
@@ -950,7 +1010,7 @@ I ran our example implementations through wordcount. >>
 <!-- .element: class="fragment" -->
 
 Note:
-- Let us now compare a big productivity factor, their compile time.
+- Let us now compare a big productivity factor, their incremental compile time.
 - Note, the results are the 90 percentile compiled with clang 4. >>
 - uWebSockets is linked as dynamic library, making it a breeze to work with. >>
 - I couldn't get IncludeOS to build as Debug,
@@ -965,7 +1025,7 @@ carries the burden of the template heavy header only approach. >>
 
 Note:
 - In terms of documentation, uWebSockets barley has any. It's a little better
-for IncludOS. Still you'll find yourself reading mostly source code.
+for IncludeOS. Still you'll find yourself reading mostly source code.
 - Beast on the other hand has excellent documentation. >>
 
 ---
@@ -995,7 +1055,7 @@ reverse proxy like NGINX. >>
 
 Note:
 - Looking at possible attack vectors, both Beast and uWebSockets are
-regular binaries, allowing for wide variety of exploits,
+regular binaries, allowing for a wide variety of exploits,
 paired with a mature set of tools for reverse engineering.
 - IncludeOS' unique execution environment, makes that harder.
 - What IncludeOS can't protect you from is application flaws.
@@ -1004,7 +1064,7 @@ That way someone could perform vote manipulation. A unikernel is not going
 to protect you from that.
 - What it can do is limit damage of things like remote code execution.
 - Many exploits rely on finding libc and using it to spawn a shell.
-- It can mitigate a set of known exploit propagation,
+- It can mitigate a set of known exploit propagations,
 like the aforementioned system call.
 - Remember, the biggest attack vector, is and remains social engineering. >>
 
@@ -1014,7 +1074,7 @@ like the aforementioned system call.
 
 Note:
 - This is my first time benchmarking a network application,
-take my results with a bucket of salt.
+please take my results with a bucket of salt.
 - Again the results are the 90 percentile,
 from running uWebSockets scalability test locally.
 - Unfortunately I didn't manage to benchmark IncludeOS. >>
@@ -1035,7 +1095,8 @@ Note:
 * Beast: 4.2mb
 
 Note:
-- No big difference in terms of user space memory usage. >>
+- No big difference in terms of user space memory usage.
+- Both sitting at around 4mb. >>
 
 ---
 
@@ -1065,6 +1126,7 @@ Note:
 Note:
 - With it's extremely special purpose implementation, uWebSockets manages to
 have an impressively small memory footprint.
+- Using only an additional 2mb, for 10.000 concurrent connections.
 - At that rate, you can host Google esque traffic,
 with less RAM than your phone has.
 - Beast does well enough. >>
@@ -1120,17 +1182,79 @@ being a solid choice for security oriented services. >>
 - With its aim, to be as modular and adaptable as possible,
 Beast comes with inherent complexity and trade offs.
 - Given its aspiration to become part of the standard library,
-it could very well be core of many upcoming libraries.
+it could very well be core of many upcoming libraries. >>
 
 ---
 
 ## Takeaway
+
+Note:
+- C++ is seldom the best at anything.
+- Python has more convenient syntax.
+- C reliably beats us in the Computer Language Benchmarks Game.
+- Rust has better type checking.
+- Elixir has more convenient multi threading.
+- And all the new languages have a central package manager,
+facilitating a shared ecosystem. >>
+
+---
+
+### Niche?
+
+Note:
+- So, what is C++' niche?
+- Libraries like uWebSockets show there can be
+a nice batteries included experience,
+yielding outstanding performance and efficiency.
+- Fulfilling the longstanding promise of safe high level constructs,
+compiled down to efficient low level components.
+- Paired with static type checking.
+- No need for a runtime.
+- And mature compilers and tools.
+- That's a sweet spot of versatility, no other language hits. >>
+
+---
+
+### Future
+
+* [Networking Ts](http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/n4656.pdf)
+<!-- .element: class="fragment" -->
+* [Executor Ts](http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/p0443r1.html)
+<!-- .element: class="fragment" -->
+* [Coroutine Ts](http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/n4649.pdf)
+<!-- .element: class="fragment" -->
+
+Note:
+- Of course C++, does not stand still.
+- Let us look at existing issues and how they might be solved in the future.
+- Most glaringly, the complete lack of networking in the standard library. >>
+- Addressed by the Networking Ts.
+- Lack of execution control. >>
+- Addressed by the Executor Ts.
+- Lack of suspend able functions. >>
+- Addressed by the Coroutine Ts.
+- Also a lack of unicode support. There are couple of papers,
+but there does not seem to be a unified vision so far. >>
 
 ---
 
 ### Source
 
 https://github.com/Voultapher/Presentations
+
+Note:
+- You'll find the source for both the presentation and examples here. >>
+
+---
+
+### Contact
+
+- Email: lukas.bergdoll@gmail.com
+- GitHub: https://github.com/Voultapher
+
+Note:
+- If you are watching this video, and you want to tell me how wrong I was.
+- Here you go. >>
 
 ---
 
@@ -1139,3 +1263,6 @@ https://github.com/Voultapher/Presentations
 ---
 
 # Q&A
+
+Note:
+- Any remaining questions?
