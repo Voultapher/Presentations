@@ -280,10 +280,19 @@ Strawpoll.Request.prototype.type = function() {
 };
 
 /**
+ * @param {flatbuffers.Encoding=} optionalEncoding
+ * @returns {string|Uint8Array|null}
+ */
+Strawpoll.Request.prototype.fingerprint = function(optionalEncoding) {
+  var offset = this.bb.__offset(this.bb_pos, 6);
+  return offset ? this.bb.__string(this.bb_pos + offset, optionalEncoding) : null;
+};
+
+/**
  * @returns {flatbuffers.Long}
  */
 Strawpoll.Request.prototype.vote = function() {
-  var offset = this.bb.__offset(this.bb_pos, 6);
+  var offset = this.bb.__offset(this.bb_pos, 8);
   return offset ? this.bb.readInt64(this.bb_pos + offset) : this.bb.createLong(0, 0);
 };
 
@@ -291,7 +300,7 @@ Strawpoll.Request.prototype.vote = function() {
  * @param {flatbuffers.Builder} builder
  */
 Strawpoll.Request.startRequest = function(builder) {
-  builder.startObject(2);
+  builder.startObject(3);
 };
 
 /**
@@ -304,10 +313,18 @@ Strawpoll.Request.addType = function(builder, type) {
 
 /**
  * @param {flatbuffers.Builder} builder
+ * @param {flatbuffers.Offset} fingerprintOffset
+ */
+Strawpoll.Request.addFingerprint = function(builder, fingerprintOffset) {
+  builder.addFieldOffset(1, fingerprintOffset, 0);
+};
+
+/**
+ * @param {flatbuffers.Builder} builder
  * @param {flatbuffers.Long} vote
  */
 Strawpoll.Request.addVote = function(builder, vote) {
-  builder.addFieldInt64(1, vote, builder.createLong(0, 0));
+  builder.addFieldInt64(2, vote, builder.createLong(0, 0));
 };
 
 /**

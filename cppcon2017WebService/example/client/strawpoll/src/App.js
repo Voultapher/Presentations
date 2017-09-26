@@ -1,6 +1,8 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
+import Fingerprint2 from 'fingerprintjs2';
+
 import { flatbuffers } from './flatbuffers';
 import { Strawpoll } from './strawpoll_generated.js';
 
@@ -173,12 +175,18 @@ class StrawPoll extends React.Component {
   }
 
   fetchPoll = (event) => {
-    const builder = new flatbuffers.Builder(1024);
-    Strawpoll.Request.startRequest(builder);
-    Strawpoll.Request.addType(builder, Strawpoll.RequestType.Poll);
-    builder.finish(Strawpoll.Request.endRequest(builder));
+    new Fingerprint2().get((result, components) => {
+      const builder = new flatbuffers.Builder(1024);
+      const fingerprint = builder.createString(result);
 
-    this.socket.send(builder.asUint8Array());
+      Strawpoll.Request.startRequest(builder);
+      Strawpoll.Request.addType(builder, Strawpoll.RequestType.Poll);
+      Strawpoll.Request.addFingerprint(builder, fingerprint);
+      builder.finish(Strawpoll.Request.endRequest(builder));
+
+      this.socket.send(builder.asUint8Array());
+    });
+
   }
 
   fetchResult = (id) => {
@@ -258,6 +266,15 @@ class StrawPoll extends React.Component {
   }
 };
 
+function PresentationUrl(props) {
+  return (
+    <div style={{ textAlign: 'right', fontWeight: 600 }}>
+      <span style={{ fontSize: '1.3em' }}>Go Vote at: </span>
+      <span style={{ fontSize: '2em', color: '#b54b63' }}>var.bz</span>
+    </div>
+  );
+}
+
 StrawPoll.propTypes = {
   apiUrl: PropTypes.string.isRequired
 };
@@ -266,7 +283,9 @@ class App extends React.Component {
   render() {
     return (
       <div className="App">
-        <StrawPoll apiUrl={'ws://45.55.173.32:3003'} />
+        {/*<StrawPoll apiUrl={'ws://165.227.29.121:3003'} />*/}
+        <StrawPoll apiUrl={'ws://localhost:3003'} />
+        <PresentationUrl />
       </div>
     );
   }
