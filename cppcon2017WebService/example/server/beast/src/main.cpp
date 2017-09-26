@@ -1,29 +1,13 @@
 //
-// Copyright (c) 2016-2017 Vinnie Falco (vinnie dot falco at gmail dot com)
+// Copyright (c) 2017 Lukas Bergdoll lukas.bergdoll@gmail.com
 //
-// Distributed under the Boost Software License, Version 1.0. (See accompanying
-// file LICENSE_1_0.txt or copy at http://www.boost.org/LICENSE_1_0.txt)
-//
-// Official repository: https://github.com/boostorg/beast
-//
-
-//------------------------------------------------------------------------------
-//
-// Example: WebSocket server, synchronous
-//
-//------------------------------------------------------------------------------
 
 #include <boost/beast/core.hpp>
 #include <boost/beast/websocket.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/functional/hash.hpp>
-//#include <boost/asio/buffers_iterator.hpp>
-//#include <cstdlib>
-//#include <functional>
 #include <iostream>
-#include <string>
-#include <thread>
 
 #include <array>
 #include <unordered_map>
@@ -84,7 +68,8 @@ namespace detail
 } // namespace detail
 
 //using poll_data_t = PollData<VoteGuard<boost::asio::ip::address, detail::hash>>;
-using poll_data_t = PollData<HippieVoteGuard<boost::asio::ip::address>>;
+using poll_data_t = PollData<VoteGuard<std::string, std::hash>>;
+//using poll_data_t = PollData<HippieVoteGuard<boost::asio::ip::address>>;
 
 // Report a failure
 void fail(boost::system::error_code ec, char const* what)
@@ -99,14 +84,13 @@ public:
   // Take ownership of the socket
   explicit session(
     tcp::socket&& socket,
-    boost::asio::ip::address address,
     FC on_close,
     FB broadcast,
     size_t session_id,
     poll_data_t& poll_data
   )
       : ws_{std::move(socket)}
-      , address_{address}
+      , fingerprint_{}
       , strand_{ws_.get_io_service()}
       , read_in_process_{false}
       , write_in_process_{false}
@@ -119,7 +103,7 @@ public:
 
     // Accept the websocket handshake
     ws_.async_accept(
-        strand_.wrap([this](boost::system::error_code ec) { on_accept(ec); })
+      strand_.wrap([this](boost::system::error_code ec) { on_accept(ec); })
     );
   }
 
@@ -137,7 +121,9 @@ public:
       std::is_same_v<
         poll_data_t::vote_guard_t,
         HippieVoteGuard<boost::asio::ip::address>
-      > || poll_data_.vote_guard.has_voted(address_)
+      >
+      || !write_in_process_ // write should always write the most recent
+      || has_voted()
     )
       message_queue_.push_back(detail::conv::m_b(br));
   }
@@ -167,7 +153,7 @@ public:
 
 private:
   websocket::stream<tcp::socket> ws_;
-  boost::asio::ip::address address_;
+  std::string fingerprint_;
   boost::asio::io_service::strand strand_;
   boost::beast::multi_buffer buffer_;
   std::vector<boost::asio::const_buffer> message_queue_;
@@ -269,15 +255,16 @@ private:
       switch(request->type())
       {
         case Strawpoll::RequestType_Poll:
-          if (poll_data_.vote_guard.has_voted(address_))
-            add_response(poll_data_.result.ref());
-
+          fingerprint_ = request->fingerprint()->c_str();
           add_response(poll_data_.poll_response.ref());
+
+          if (has_voted())
+            add_response(poll_data_.result_ref());
           break;
         case Strawpoll::RequestType_Result:
           poll_data_.register_vote(
             request->vote(),
-            address_,
+            fingerprint_,
             add_response,
             [&broadcast = broadcast_](FlatBufferRef br) { broadcast(br); }
           );
@@ -286,6 +273,12 @@ private:
           add_response(poll_data_.error_responses.invalid_type.ref());
       }
     }
+  }
+
+  bool has_voted() const noexcept
+  {
+    return !fingerprint_.empty()
+      && poll_data_.vote_guard.has_voted(fingerprint_);
   }
 };
 
@@ -356,7 +349,7 @@ public:
       return;
     }
 
-    if (! acceptor_.is_open()) return;
+    if (!acceptor_.is_open()) return;
     do_accept();
   }
 
@@ -385,11 +378,11 @@ public:
     else
     {
       // Create the session and run it
-      const auto address = socket_.remote_endpoint().address();
+      //const auto address = socket_.remote_endpoint().address();
       sessions_.try_emplace(
         session_id_counter_,
         std::move(socket_),
-        std::move(address),
+        //std::move(address),
         on_session_close_,
         broadcast_,
         session_id_counter_,

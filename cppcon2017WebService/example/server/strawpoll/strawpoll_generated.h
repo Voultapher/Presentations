@@ -192,10 +192,14 @@ inline flatbuffers::Offset<Result> CreateResultDirect(
 struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum {
     VT_TYPE = 4,
-    VT_VOTE = 6
+    VT_FINGERPRINT = 6,
+    VT_VOTE = 8
   };
   RequestType type() const {
     return static_cast<RequestType>(GetField<int8_t>(VT_TYPE, 0));
+  }
+  const flatbuffers::String *fingerprint() const {
+    return GetPointer<const flatbuffers::String *>(VT_FINGERPRINT);
   }
   int64_t vote() const {
     return GetField<int64_t>(VT_VOTE, 0);
@@ -203,6 +207,8 @@ struct Request FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyField<int8_t>(verifier, VT_TYPE) &&
+           VerifyOffset(verifier, VT_FINGERPRINT) &&
+           verifier.Verify(fingerprint()) &&
            VerifyField<int64_t>(verifier, VT_VOTE) &&
            verifier.EndTable();
   }
@@ -214,6 +220,9 @@ struct RequestBuilder {
   void add_type(RequestType type) {
     fbb_.AddElement<int8_t>(Request::VT_TYPE, static_cast<int8_t>(type), 0);
   }
+  void add_fingerprint(flatbuffers::Offset<flatbuffers::String> fingerprint) {
+    fbb_.AddOffset(Request::VT_FINGERPRINT, fingerprint);
+  }
   void add_vote(int64_t vote) {
     fbb_.AddElement<int64_t>(Request::VT_VOTE, vote, 0);
   }
@@ -223,7 +232,7 @@ struct RequestBuilder {
   }
   RequestBuilder &operator=(const RequestBuilder &);
   flatbuffers::Offset<Request> Finish() {
-    const auto end = fbb_.EndTable(start_, 2);
+    const auto end = fbb_.EndTable(start_, 3);
     auto o = flatbuffers::Offset<Request>(end);
     return o;
   }
@@ -232,11 +241,25 @@ struct RequestBuilder {
 inline flatbuffers::Offset<Request> CreateRequest(
     flatbuffers::FlatBufferBuilder &_fbb,
     RequestType type = RequestType_Poll,
+    flatbuffers::Offset<flatbuffers::String> fingerprint = 0,
     int64_t vote = 0) {
   RequestBuilder builder_(_fbb);
   builder_.add_vote(vote);
+  builder_.add_fingerprint(fingerprint);
   builder_.add_type(type);
   return builder_.Finish();
+}
+
+inline flatbuffers::Offset<Request> CreateRequestDirect(
+    flatbuffers::FlatBufferBuilder &_fbb,
+    RequestType type = RequestType_Poll,
+    const char *fingerprint = nullptr,
+    int64_t vote = 0) {
+  return Strawpoll::CreateRequest(
+      _fbb,
+      type,
+      fingerprint ? _fbb.CreateString(fingerprint) : 0,
+      vote);
 }
 
 struct Response FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {

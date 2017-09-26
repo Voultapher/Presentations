@@ -23,6 +23,7 @@ struct FlatBufferRef
   constexpr FlatBufferRef(ptr_t d, size_t s) noexcept : data(d), size(s) {}
 };
 
+#include <iostream> // tmp debug
 class FlatBufferWrapper
 {
 public:
@@ -49,6 +50,19 @@ public:
   constexpr FlatBufferRef ref() const noexcept
   {
     return { buffer_.data(), buffer_.size() };
+  }
+
+  // copy new buffer into same area as previous
+  // this way we should never invalidate result_
+  void inplace_assign(const FlatBufferWrapper& other)
+  {
+    if (other.buffer_.size() != buffer_.size())
+    {
+      std::cerr << "inplace_assign() size mismatch!\n";
+      return;
+    }
+
+    std::copy_n(other.buffer_.data(), other.buffer_.size(), buffer_.data());
   }
 
 private:
@@ -108,9 +122,7 @@ public:
   using vote_guard_t = T;
   vote_guard_t vote_guard;
 
-  FlatBufferWrapper result;
-
-  explicit PollData() : result{make_result(votes_)} {}
+  explicit PollData() : votes_{}, result_{make_result(votes_)} {}
 
   PollData(const PollData&) = delete;
   PollData(PollData&&) = default;
@@ -151,6 +163,11 @@ public:
   };
   ErrorResponses error_responses{};
 
+  FlatBufferRef result_ref() const noexcept
+  {
+    return result_.ref();
+  }
+
   template<typename FF, typename SF> void register_vote(
     const vote_t vote,
     const typename vote_guard_t::address_t& address,
@@ -168,17 +185,18 @@ public:
 
     if (!vote_guard.register_address(address))
     {
-      fail_func(result.ref());
+      fail_func(result_ref());
       return;
     }
 
     ++votes_[vote];
-    result = make_result(votes_);
-    success_func(result.ref());
+    result_.inplace_assign(make_result(votes_));
+    success_func(result_ref());
   }
 
 private:
-  votes_t votes_{};
+  votes_t votes_;
+  FlatBufferWrapper result_;
 };
 
 template<typename T, template <typename> class H> class VoteGuard
