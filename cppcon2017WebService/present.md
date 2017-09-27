@@ -550,9 +550,78 @@ Note:
 
 ---
 
+## Js Wut?
+
+Note:
+
+- Join me on a short expedition to the land of Js Wut. >>
+
+---
+
+### Sort Number Array
+
+```js
+const options = [1, 10, 21, 2].sort();
+```
+```js
+[1, 10, 2, 21]
+```
+<!-- .element: class="fragment" -->
+```js
+const options = [1, 10, 21, 2].sort((a, b) => a < b);
+```
+<!-- .element: class="fragment" -->
+```js
+[1, 10, 2, 21] or [1, 2, 10, 21]
+```
+<!-- .element: class="fragment" -->
+```js
+const options = [1, 10, 21, 2].sort((a, b) => a - b);
+```
+<!-- .element: class="fragment" -->
+```js
+[1, 2, 10, 21]
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- Let's take a look at the highly complex task of sorting an array
+containing numbers.
+- What does options look like?
+- Yep, obviously sort treats numbers as strings and sorts them according
+to Unicode code points. >>
+- Lets give a a comparison lambda. This looks similar to C++. >>
+- Well, now we get either of those 2 results,
+depending on the browser implementation.
+- The standard sort expects a comparison function to return either a
+positive or negative number, indicating larger or smaller. >>
+- Subtracting the 2 numbers from one another will do the trick. >>
+- This is of course due to historical reasons. >>
+
+---
+
+### Implicit Conversions
+
+```js
+([![]]+[][[]])[+!+[]+[+[]]]+(!![]+[])[+[]]+(![]+[])[!+[]+
+!+[]+!+[]]+(![]+[])[+[]]+([![]]+[][[]])[+!+[]+[+[]]]+
+([][[]]+[])[+!+[]]+(!![]+[])[!+[]+!+[]+!+[]]
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- You thought C++ implicit conversions are bad? >>
+- What does this valid piece of js evaluate to?
+- Let's find out!
+- Obviously the string `"itsfine"`
+- Turns out you can express the entirety of Javascript with just 6 symbols. >>
+
+---
+
 ## IncludeOS
 
 Note:
+- Back to the occasionally less insane land of C++.
 - Let us take a look at our second high level WebSocket library.
 - However IncludeOS is much more than a WebSocket library.
 - Who of you went to Alfred's talks earlier this week?
@@ -976,9 +1045,198 @@ Note:
 - Earlier I mentioned manual broadcast.
 - We store all our sessions in an unordered map.
 - That way we can quickly add and remove sessions.
-- A broadcast, queues a message for all open sessions.
-- Explaining the queuing mechanism and pitfalls would break the scope of
-this presentation.
+- A broadcast, queues a message for all open sessions. >>
+
+---
+
+### Queuing Mechanism
+
+```cpp
+public:
+  void add_message(FlatBufferRef br)
+  {
+    if (!write_in_process_ || has_voted())
+      message_queue_.push_back({ br.data, br.size });
+  }
+
+private:
+  std::vector<boost::asio::const_buffer> message_queue_;
+```
+
+Note:
+- Of course, now that we add messages from the outside and sending is async.
+- We have to take care of the case where we want to send a message,
+but a write is already in progress.
+- In our application `add_message` is only called by broadcast.
+- So that we can avoid adding the message if either the client hasn't voted
+yet, or there is already a write in progress.
+- We assume that every write after a vote is a result response.
+- Which should refer to the most up to date result. >>
+
+---
+
+### Flushing
+
+```cpp
+void flush_message_queue()
+{
+  if (write_in_process_) return;
+  if (message_queue_.empty()) return;
+
+  ws_.async_write(
+    std::array<boost::asio::const_buffer, 1>{{
+      std::move(message_queue_.back())
+    }},
+    strand_.wrap(after_write)
+  );
+
+  write_in_process_ = true;
+  message_queue_.pop_back();
+}
+```
+
+Note:
+- `flush_message_queue` is called both externally and internally.
+- It replaces the position of `do_write`.
+- Conceptually it starts a write event chain, that should deplete
+our message queue.
+- If this event chain is already in progress, flushing is a no-op.
+- Notice, that as soon as we queued a write operation via `async_write`,
+we set our internal state to `write_in_progress_`.
+- Let's look at the `after_write` callback triggered by the write operation. >>
+
+---
+
+### Event Chain Integrity
+
+```cpp
+void after_write(
+  boost::system::error_code ec,
+  size_t bytes_transferred
+)
+{
+  write_in_process_ = false;
+  on_write(ec, bytes_transferred);
+}
+```
+
+```cpp
+void do_read()
+{
+  if (read_in_process_) return;
+
+  ws_.async_read([...])
+
+  read_in_process_ = true;
+}
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- First it releases our conceptual lock, and then calls `on_write`.
+- Which depending on the queue size, calls either `flush_message_queue` again,
+or `do_read`.
+- Similar story for reading. >>
+- I abbreviated the `async_read` call, conceptually `after_read` is the same
+as `after_write`.
+- For this model to work, its imperative,
+that we avoid fragmenting our event loop.
+- For each session, there should only ever be one chain of events.
+- The whole chain forms one big loop, at the same, time some of its segments,
+may temporarily form a loop with each other.
+- However, given enough time,
+it should always unfold to the overall session event loop. >>
+
+---
+
+### Exit
+
+```cpp
+
+void on_read(
+  boost::system::error_code ec,
+  size_t bytes_transferred
+) {
+  if (ec == websocket::error::closed)
+  {
+    on_close_(session_id_);
+    return;
+  }
+
+  [...]
+}
+```
+
+Note:
+- Ideally, having built an infinite loop, there is way to exit it.
+- Having completed a read, it can set the error code to `websocket::error::closed`.
+- If that is the case, we call listener, and erase the session
+with our associated id.
+- Essentially destructing ourself. >>
+
+---
+
+### Avoiding Pointer Invalidation
+
+```cpp
+struct ErrorResponses {
+  const FlatBufferWrapper invalid_message = make_msg(
+    "Invalid request message"
+  );
+  const FlatBufferWrapper invalid_type = make_msg(
+    "Invalid request type"
+  );
+};
+
+ErrorResponses error_responses{};
+```
+
+Note:
+- Things like the error responses, or the poll response, are created once.
+- Given that our `poll_data` object is owned by listener,
+we guarantee a pointer lifetime for those objects, that is same as the
+lifetime of the server.
+- Using a synchronous interface, avoids many pitfalls.
+- Before sending an object, we serialize it, the send call blocks until the
+send happened, and we Destruct our object.
+- With async interfaces this gets trickier.
+- We have to guarantee a lifetime, until all write operations are done. >>
+
+---
+
+### Initilize Once | Refill
+
+```cpp
+void inplace_assign(const FlatBufferWrapper& other)
+{
+  // placeholder error handling
+  if (other.buffer_.size() != buffer_.size())  
+    return;
+
+  std::copy_n(
+    other.buffer_.data(),
+    other.buffer_.size(),
+    buffer_.data()
+  );
+}
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- Shared lifetime? Many would now suggest using a shared pointer.
+- Yes, that would work.
+- I believe we can do better.
+- Let's see how we can avoid heap allocation. >>
+- The only dynamic response in our application, is the result response.
+- New votes, update the vote array.
+- However, we know that serializing this object will always create an
+object of the same size.
+- By copying the new object into the previous location,
+we can guarantee, that we never invalidate any of our pointers.
+- We avoid heap allocation.
+- A result write, will always write the most up to date result.
+- That way, we can reduce the amount messages we need to send,
+saving both bandwidth and local resources. >>
 
 ---
 
