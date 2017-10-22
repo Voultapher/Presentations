@@ -8,3 +8,6 @@
 [submodule "cppcon2017WebService/example/server/beast/lib/beast"]
 	path = cppcon2017WebService/example/server/beast/lib/beast
 	url = https://github.com/boostorg/beast.git
+[submodule "MeetingC++2017/reveal.js"]
+	path = MeetingC++2017/reveal.js
+	url = https://github.com/hakimel/reveal.js.git
