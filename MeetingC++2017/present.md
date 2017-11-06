@@ -480,7 +480,7 @@ public:
 
   explicit function(invoke_ptr_t f) : invoke_ptr_(f) {}
 
-  R operator() (Args&&... args) const
+  R operator() (Args... args) const
   {
     return invoke_ptr_(std::forward<Args>(args)...);
   }
@@ -550,7 +550,7 @@ the function pointer has only 8 bytes of storage.
 
 ---
 
-## Convert to functional programming7
+## Convert to functional programming?
 <!-- .element: class="fragment" -->
 
 Note:
@@ -599,7 +599,7 @@ std::cout << pure(-1);
 Note:
 - Pure lambdas not really pure
 - Compiler can resolve the address of val at compile time.
-- Now we can do >> **3s** >>
+- Now we can do.
 - Something curious I found out just recently.
 - Nope, odr usage. Standard 7.2.
 - With that we can add a new constructor to our function class.
@@ -619,7 +619,7 @@ invoke_ptr_ = static_cast<invoke_ptr_t>([](Args... args) -> R
 
 Note:
 - We are golden now, right?
-- Someone see any issues? **10s**
+- Someone see any issues?
 - We haven't talked about copying and moving, but let's do that later.
 - We are doing improper argument type forwarding.
 - To avoid unnecessary moving, it should be >>
@@ -635,7 +635,7 @@ invoke_ptr_ = static_cast<invoke_ptr_t>([](Args&&... args) -> R
 });
 ```
 Note:
-- We should be passing in the arguments as rvalue references. **5s**
+- We should be passing in the arguments as rvalue references.
 - But that does not work, as that would not fit the function pointer type. >>
 
 ---
@@ -657,11 +657,11 @@ thread_local static T cap{ std::forward<T>(closure) };
 ```
 <!-- .element: class="fragment" -->
 Note:
-- Let's look at this >> **15s**
+- Let's look at this
 - You guessed it, it pirnts 0.
 - Although each lambda has a unique type, here there is only **ONE**
 lambda, which means that, >>
-- cap gets created only once. **3s**
+- cap gets created only once.
 - The first time this constructor is called.
 ---
 
@@ -690,29 +690,242 @@ Note:
 
 ---
 
-### How about we store the closure inplace
+### Storing the Closure
+
+* Class: memory layout
+<!-- .element: class="fragment" -->
+* Constructor: memory initialization
+<!-- .element: class="fragment" -->
+* Run time: mutate memory
+<!-- .element: class="fragment" -->
 
 Note:
-- We could just store the closure inside the function object. >>
+- Before we try figuring out how to store the closure object,
+we have to understand the conceptual memory time line.
+- Class level: here we decide the memory layout.
+- Constructor level: here we decide how the memory layout is initialized.
+Note this still happens at compile time, however the constructor can
+no longer change the memory layout.
+- The memory layout is strongest way for the compiler to reason about
+your program, with that comes the biggest optimization potential.
+- Run time: here we potentially mutate the memory.
 
 ---
+
+### Dynamic Closure Storage
+
+```cpp
+template<typename C> explicit constexpr vtable(wrapper<C>) noexcept :
+  invoke_ptr{ static_cast<invoke_ptr_t>(
+    [](storage_ptr_t storage_ptr, Args&&... args) -> R
+		{ return (*reinterpret_cast<C*>(storage_ptr))(
+      std::forward<Args>(args)...
+    ); }
+	)},
+	copy_ptr{ static_cast<copy_ptr_t>(
+    [](storage_ptr_t dst_ptr, storage_ptr_t src_ptr) -> void
+	  { new (dst_ptr) C{ (*reinterpret_cast<C*>(src_ptr)) }; }
+  )},
+	destructor_ptr{ static_cast<destructor_ptr_t>(
+		[](storage_ptr_t storage_ptr) noexcept -> void
+		{ reinterpret_cast<C*>(storage_ptr)->~C(); }
+	)},
+  size{sizeof(C)}
+{}
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- We don't know the closure object size at class level.
+- This information only becomes availible at the Constructor level,
+it's already to late to change the class layout.
+- Classical type erasure
+- Avoid inheritance
+- More explicit vtable implementation
+- Easy
+
+---
+
+### Custom vtable
+
+```
+template<typename R, typename... Args> struct vtable
+{
+  using storage_ptr_t = void*;
+
+  using invoke_ptr_t = R(*)(storage_ptr_t, Args&&...);
+	using copy_ptr_t = void(*)(storage_ptr_t, storage_ptr_t);
+	using destructor_ptr_t = void(*)(storage_ptr_t);
+
+  [...]
+}
+```
+
+Note:
+- 3 core function pointers
+- invoke
+- copy
+- destroy
+
+---
+
+### Custom vtable
+
+```cpp
+const invoke_ptr_t invoke_ptr;
+const copy_ptr_t copy_ptr;
+const destructor_ptr_t destructor_ptr;
+const size_t size;
+```
+
+Note:
+- Store one of each and a size
+
+---
+
+### Custom vtable
+
+```cpp
+template<typename C> explicit constexpr vtable(wrapper<C>) noexcept :
+  invoke_ptr{ static_cast<invoke_ptr_t>(
+    [](storage_ptr_t storage_ptr, Args&&... args) -> R
+		{
+      return (*reinterpret_cast<C*>(storage_ptr))(
+        std::forward<Args>(args)...
+      );
+    }
+	)},
+```
+
+Note:
+- Initialize `invoke_ptr`
+- Closure type is available in the constructor
+
+---
+
+### Custom vtable
+
+```cpp
+copy_ptr{ static_cast<copy_ptr_t>(
+  [](storage_ptr_t dst_ptr, storage_ptr_t src_ptr) -> void
+  {
+    new (dst_ptr) C{ (*reinterpret_cast<C*>(src_ptr)) };
+  }
+)},
+```
+
+Note:
+- Initialize `copy_ptr`
+- Placement new to construct into `aligned_storage_t` or `heap memory`
+
+---
+
+### Custom vtable
+
+```cpp
+destructor_ptr{ static_cast<destructor_ptr_t>(
+	[](storage_ptr_t storage_ptr) noexcept -> void
+	{
+    reinterpret_cast<C*>(storage_ptr)->~C();
+  }
+)},
+size{sizeof(C)}
+```
+
+Note:
+- Initialize `destructor_ptr`
+- Call object destructor stored in the memory associated with `storage_ptr`
+- Store closure size
+
+---
+
+### Dynamic Closure Storage
+
+```cpp
+private:
+  vtable_ptr_t vtable_ptr_;
+  mutable typename vtable_t::storage_ptr_t storage_ptr_;
+```
+
+Note:
+- Before constructor class layout
+
+---
+
+### Dynamic Closure Storage
+
+```cpp
+template<
+  typename T,
+  typename C = std::decay_t<T>,
+> function(T&& closure)
+{
+  static const vtable_t vt{detail::wrapper<C>{}};
+  vtable_ptr_ = std::addressof(vt);
+
+  storage_ptr_ = std::malloc(sizeof(C));
+  new (storage_ptr_) C{std::forward<C>(closure)};
+}
+```
+
+Note:
+- For each closure type specific instantiation create `vtable`.
+- `vtable_ptr` as link to the `vtable`
+- We don't know the size of the closure at type layout.
+- So we have to store it on the heap.
+- Again placement new;
+- Note that we have to decay the closure parameter type.
+
+---
+
+### Dynamic Closure Storage
+
+```cpp
+~function()
+{
+  if (storage_ptr_)
+  {
+    vtable_ptr_->destructor_ptr(storage_ptr_);
+    std::free(storage_ptr_);
+  }
+}
+```
+
+Note:
+- Destructor has to destroy object
+- Free object heap memory
+- Note, pointers created by `malloc` can be deallocated
+without knowing the object type.
+- Skip copy ctor, move ctor, copy assignment and move assignment.
+- [Compate to `std::function`](http://quick-bench.com/ArL8ERJJwk0vvwqpCYjkmJFOuMo)
+- Why so much slower?
+
+---
+
+# SBO
+
+Note:
+- Small Buffer Optimization
+- At the type layout stage
+- Piece of memory to store small objects,
+inside the function object on the stack.
+
+---
+
+### Inplace Closure Storage
 
 ```py
 template<typename R, typename... Args>
 class function<R(Args...)>
 {
 public:
-  using invoke_ptr_t = R(*)(Args...);
   using storage_t = ???
 }
 ```
 <!-- .element: class="fragment" -->
 
 Note:
-- Now what should the local variable type be? >> **5s**
-- The type of the closure does only become visible in the constructor,
-as far as I know there is no way of making that type visible to other parts
-of the class.
+- Now what should the local variable type be? >>
 - It seems we may have to resort to the dark art of type less storage >>
 ---
 
@@ -726,14 +939,29 @@ Note:
 
 ---
 
+### Inplace Closure Storage
+
 `std::aligned_storage`
+
+```cpp
+template<
+  std::size_t Len,
+  std::size_t Align /* default alignment not implemented */
+>
+struct aligned_storage {
+    struct type {
+        alignas(Align) unsigned char data[Len];
+    };
+};
+```
+<!-- .element: class="fragment" -->
 
 Note:
 - It is a byte array, with specific size and alignment >>
 
 ---
 
-### Inplace Stack Storage
+### Inplace Closure Storage
 
 ```cpp
 {
@@ -750,7 +978,7 @@ std::cout << 6;
 ```
 
 Note:
-- So what does this print? **15s** >>
+- So what does this print?
 
 ---
 
@@ -761,7 +989,7 @@ Note:
 
 ---
 
-### Inplace Stack Storage
+### Inplace Closure Storage
 
 ```cpp
 {
@@ -784,7 +1012,7 @@ the inner scope. **5s**
 
 ---
 
-### Inplace Stack Storage
+### Inplace Closure Storage
 
 ```cpp
 {
@@ -806,27 +1034,36 @@ Note:
 - Trust me you don't want to debug, that.
 - By writing into storage, which essentially was an empty struct,
 we corrupted the stack
+
 ---
 
-### Storing the Closure
+### Inplace Closure Storage
 
-* Class: memory layout
-<!-- .element: class="fragment" -->
-* Constructor: memory initialization
-<!-- .element: class="fragment" -->
-* Run time: mutate memory
-<!-- .element: class="fragment" -->
+```cpp
+new (std::addressof(storage_)) C{std::forward<C>(closure)};
+```
 
 Note:
-- Before we try figuring out how to store the closure object,
-we have to understand the conceptual memory time line.
-- Class level: here we decide the memory layout.
-- Constructor level: here we decide how the memory layout is initialized.
-Note this still happens at compile time, however the constructor can
-no longer change the memory layout.
-- The memory layout is strongest way for the compiler to reason about
-your program, with that comes the biggest optimization potential.
-- Run time: here we potentially mutate the memory.
+- Placement new into our storage object
+- Make sure size and alignment fit
+
+---
+
+### Inplace Closure Storage
+
+```cpp
+R operator() (Args... args) const
+{
+  return vtable_ptr_->invoke_ptr(
+    std::addressof(storage_),
+    std::forward<Args>(args)...
+  );
+}
+```
+
+Note:
+- Call operator
+- Replace `storage_ptr` with the address of the `storage_` object
 
 ---
 
@@ -886,3 +1123,8 @@ I think it is a bad abstraction most of the time.
 It only make sense in very specific library level use cases.
 
 Function signature issue, usually over constraining.
+
+Opaque abstraction
+
+[inplace vs `std::function`](http://quick-bench.com/VU7NZGtfLziTGzMPporm-P8qYcI)
+[inplace vs `stdext::inplace_function`](http://quick-bench.com/Ls_1HAmdg1TyXRU-GE-BMKy17l4)
