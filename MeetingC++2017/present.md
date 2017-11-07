@@ -23,23 +23,28 @@ Note:
 Note:
 - No!
 
-
 ---
 
 ### Roadmap
 
-* TODO
+* Problem
 <!-- .element: class="fragment" -->
-* Client
+
+* Status Quo
 <!-- .element: class="fragment" -->
-* Server
+
+* Alternatives
 <!-- .element: class="fragment" -->
 
 Note:
-- First we'll try to see where a C++ application makes sense. >>
-- Then a quick a look at the client side of a web application. >>
+- First we'll try to understand what the problem is.
+- Then we'll try to implement `std::function`,
+to understand the root of those problems.
+- And finally we'll explore alternatives.
 
 ---
+
+`std::max`
 
 ```cpp
 namespace std
@@ -58,6 +63,8 @@ Note:
 - Wrong?
 
 ---
+
+`std::max`
 
 ```cpp
 namespace std
@@ -80,15 +87,12 @@ Note:
 - [Benchmark how much slower?]
 (http://quick-bench.com/v0VC_hCf4naIfmjdv5PEpEqP-KQ)
 - Change auto to int
+- Note we over constrain so the user has to specify to function type.
+- Function can't be used in constexpr context anymore.
 
 ---
 
-Note:
-- No one would write code like this, right?
-- Github search
-- Majority was free functions
-
----
+Github Search
 
 ```cpp
 template <typename A, typename B>
@@ -100,11 +104,17 @@ std::function<B(A)> Y(
 	};
 }
 ```
+<!-- .element: class="fragment" -->
 
 Note:
-- TODO try to replace with templates
+- No one would write code like this, right?
+- Github search
+- Majority was free functions >>
+- A Y combinator
 
 ---
+
+Github Search
 
 ```cpp
 template<typename T>
@@ -116,8 +126,12 @@ std::vector<T> filter(
 
 Note:
 - Tried being generic
+- Swap the arguments, replace the predicate with a template,
+replace the vector with a range and this could be in the STL.
 
 ---
+
+Github Search
 
 ```cpp
 #include <functional>
@@ -135,8 +149,11 @@ std::function<TYPE(TYPE)> Sum(
 
 Note:
 - Lambda calculus
+- That's quickly going to become expensive.
 
 ---
+
+Github Search
 
 ```cpp
 std::string join(
@@ -151,9 +168,10 @@ std::string join(
 Note:
 - Again tried being generic
 - Just beautiful
-
----
-
+- Imagine calling this with 2 string literals.
+- Heap allocate the list nodes, which being strings might allocate again,
+the binary predicate might have to allocate it's arguments again,
+and let's hope for return value optimization.
 
 ---
 
@@ -177,14 +195,16 @@ Note:
 #### Are we doing heap allocation?
 
 ```cpp
-std::function<void()> a = []() { return 42; };
-```
-<!-- .element: class="fragment" -->
-```cpp
 std::array<int, 4> buf;
 std::function<void()> a = [buf]() { return 42; };
 ```
 <!-- .element: class="fragment" -->
+
+```cpp
+std::function<void()> a = []() { return 42; };
+```
+<!-- .element: class="fragment" -->
+
 ```cpp
 void foo(const std::function<void()>& arg)
 {
@@ -204,7 +224,7 @@ Note:
 
 ---
 
-# closure
+# Closure
 
 Note:
 - Ok, before we dive deeper into the topic,
@@ -214,6 +234,8 @@ lets talk about some concepts.
 - Most common example. >>
 
 ---
+
+Lambda
 
 ```cpp
 int val = 3;
@@ -225,6 +247,8 @@ Note:
 - Not new concept
 
 ---
+
+C++03 Lambda
 
 ```cpp
 struct closure
@@ -253,6 +277,7 @@ Note:
 for (int i = 1; i <= 10; ++i)
   std::cout << i << '\n';
 ```
+<!-- .element: class="fragment" -->
 
 Note:
 - During the talk, when I show you a small code snippet containing `cout`,
@@ -261,7 +286,8 @@ I want you to tell me what you think it prints.
 
 ---
 
-## Size of callable *things*
+### Size of callable *things*
+
 Note:
 - Size of callable *things*
 
@@ -279,7 +305,7 @@ void bar()
 }
 ```
 
-8 or 4 byte
+Usually 8 or 4 byte
 <!-- .element: class="fragment" -->
 
 Note:
@@ -288,7 +314,7 @@ Note:
 
 ---
 
-Lambdas
+Lambda
 
 ```cpp
 auto f = [](char arg) {};
@@ -324,7 +350,7 @@ Note:
 
 ---
 
-## Function pointer types
+### Function pointer types
 
 Note:
 - Function pointers
@@ -332,7 +358,7 @@ Note:
 
 ---
 
-### Free Functions
+Free Function
 
 ```cpp
 void foo(int arg);
@@ -350,7 +376,7 @@ Note:
 
 ---
 
-### Member function pointers
+Member function pointers
 
 ```cpp
 class foo
@@ -368,7 +394,7 @@ Note:
 
 ---
 
-### Member function pointers
+Member function pointer
 
 ```cpp
 class foo
@@ -401,6 +427,8 @@ Note:
 
 ---
 
+Lambda
+
 ```cpp
 auto f = [](int arg) {};
 ```
@@ -417,8 +445,7 @@ Note:
 
 ---
 
-### Lambda ->
-### Function Pointer
+Lambda -> Function Pointer
 
 ```
 void(*f)(int) = [](int arg) { std::cout << arg; };
@@ -427,9 +454,11 @@ f(3);
 ```
 
 Note:
-- Lambdas are convertible to function pointers.
+- Lambdas are implicitly convertible to function pointers.
 
 ---
+
+`naive::function`
 
 ```
 class function
@@ -449,10 +478,15 @@ private:
 ```
 
 Note:
-- Basic function closure implementation.
+- Naive function closure implementation.
 - Ignoring rule of 6 to make it more readable.
+- The `invoke_ptr_` is a function pointer, initialized by the constructor.
+- The call operator takes the function argument,
+and invokes the function pointer with the argument.
 
 ---
+
+Example
 
 ```cpp
 function f{[](int a) { std::cout << a + 2; }};
@@ -464,7 +498,7 @@ Note:
 
 ---
 
-### Generic
+Generic
 
 ```
 template<typename> class function;
@@ -488,23 +522,22 @@ private:
   invoke_ptr_t invoke_ptr_;
 };
 ```
+<!-- .element: class="fragment" -->
 
 Note:
 - Make generic
-- Class signature
+- `std::function` class signature
 - `invoke_ptr_t`
-- Call operator
+- Call operator arguments by value and const.
 
 ---
 
-### Usage
+Usage
 
 ```cpp
-function<int(int)> f{
-  [](int a) { return a + 3; }
-};
+function<int(int)> f{[](int a) { return a + 3; }};
 
-const int res = f(5);
+std::cout << f(5);
 ```
 
 Note:
@@ -513,20 +546,21 @@ Note:
 
 ---
 
-### Closure Storage
+Closure Storage
 
 ```cpp
-const int b;
-function<int(int)> f{
-  [b](int a) { return a + b; }
-};
+const int b = 3;
+function<int(int)> f{[b](int a) { return a + b; }};
 
 const int res = f(5);
 ```
 
+Note:
+- What will happen?
+
 ---
 
-### Compiler Error
+Compiler Error
 
 ```
 [...]
@@ -550,7 +584,7 @@ the function pointer has only 8 bytes of storage.
 
 ---
 
-## Convert to functional programming?
+### Convert to functional programming?
 <!-- .element: class="fragment" -->
 
 Note:
@@ -559,7 +593,7 @@ Note:
 
 ---
 
-# static
+# Static
 <!-- .element: class="fragment" -->
 
 Note:
@@ -570,7 +604,7 @@ with a capturing lambda.
 
 ---
 
-### Implicit Lambda Capture
+Implicit Lambda Capture
 
 ```cpp
 static int val = 4;
@@ -601,15 +635,17 @@ Note:
 - Compiler can resolve the address of val at compile time.
 - Now we can do.
 - Something curious I found out just recently.
+- Which Error?
 - Nope, odr usage. Standard 7.2.
-- With that we can add a new constructor to our function class.
+- With that we can add a new constructor to our `function` class.
+- Types are also visible inside a lambda.
 
 ---
 
-### Static Closure Storage
+Static Closure Storage
 
 ```cpp
-thread_local static T cap{ std::forward<T>(closure) };
+static T cap{ std::forward<T>(closure) };
 
 invoke_ptr_ = static_cast<invoke_ptr_t>([](Args... args) -> R
 {
@@ -626,8 +662,10 @@ Note:
 
 ---
 
+Argument Type Forwarding
+
 ```cpp
-thread_local static T cap{ std::forward<T>(closure) };
+static T cap{ std::forward<T>(closure) };
 
 invoke_ptr_ = static_cast<invoke_ptr_t>([](Args&&... args) -> R
 {
@@ -639,6 +677,8 @@ Note:
 - But that does not work, as that would not fit the function pointer type. >>
 
 ---
+
+Example
 
 ```cpp
 using func_t = function<int(void)>;
@@ -653,7 +693,7 @@ std::cout << vec.back()();
 <!-- .element: class="fragment" -->
 
 ```cpp
-thread_local static T cap{ std::forward<T>(closure) };
+static T cap{ std::forward<T>(closure) };
 ```
 <!-- .element: class="fragment" -->
 Note:
@@ -669,6 +709,7 @@ lambda, which means that, >>
 
 * Easy to use correctly
 <!-- .element: class="fragment" -->
+
 * Easy to use incorrectly
 <!-- .element: class="fragment" -->
 
@@ -682,6 +723,7 @@ Note:
 ### Interface Usage
 
 * Easy to use correctly
+
 * Hard to use incorrectly
 <!-- .element: class="fragment" -->
 
@@ -694,8 +736,10 @@ Note:
 
 * Class: memory layout
 <!-- .element: class="fragment" -->
+
 * Constructor: memory initialization
 <!-- .element: class="fragment" -->
+
 * Run time: mutate memory
 <!-- .element: class="fragment" -->
 
@@ -712,25 +756,22 @@ your program, with that comes the biggest optimization potential.
 
 ---
 
-### Dynamic Closure Storage
+Dynamic Closure Storage
 
 ```cpp
-template<typename C> explicit constexpr vtable(wrapper<C>) noexcept :
+template<typename C>
+explicit constexpr vtable(wrapper<C>) noexcept :
   invoke_ptr{ static_cast<invoke_ptr_t>(
     [](storage_ptr_t storage_ptr, Args&&... args) -> R
-		{ return (*reinterpret_cast<C*>(storage_ptr))(
+		{ return (*static_cast<C*>(storage_ptr))(
       std::forward<Args>(args)...
     ); }
 	)},
 	copy_ptr{ static_cast<copy_ptr_t>(
     [](storage_ptr_t dst_ptr, storage_ptr_t src_ptr) -> void
-	  { new (dst_ptr) C{ (*reinterpret_cast<C*>(src_ptr)) }; }
+	  { new (dst_ptr) C{ (*static_cast<C*>(src_ptr)) }; }
   )},
-	destructor_ptr{ static_cast<destructor_ptr_t>(
-		[](storage_ptr_t storage_ptr) noexcept -> void
-		{ reinterpret_cast<C*>(storage_ptr)->~C(); }
-	)},
-  size{sizeof(C)}
+  [...]
 {}
 ```
 <!-- .element: class="fragment" -->
@@ -743,10 +784,11 @@ it's already to late to change the class layout.
 - Avoid inheritance
 - More explicit vtable implementation
 - Easy
+- Let's look at it one piece at a time.
 
 ---
 
-### Custom vtable
+Custom vtable
 
 ```
 template<typename R, typename... Args> struct vtable
@@ -769,7 +811,7 @@ Note:
 
 ---
 
-### Custom vtable
+Custom vtable
 
 ```cpp
 const invoke_ptr_t invoke_ptr;
@@ -783,33 +825,51 @@ Note:
 
 ---
 
-### Custom vtable
+Custom vtable
 
 ```cpp
-template<typename C> explicit constexpr vtable(wrapper<C>) noexcept :
-  invoke_ptr{ static_cast<invoke_ptr_t>(
-    [](storage_ptr_t storage_ptr, Args&&... args) -> R
-		{
-      return (*reinterpret_cast<C*>(storage_ptr))(
-        std::forward<Args>(args)...
-      );
-    }
-	)},
+template<typename C>
+explicit constexpr vtable(wrapper<C>) noexcept :
+```
+
+Note:
+- Constructor signature
+- We only care about the closure type, not the object itself.
+- `wrapper<C>` is an empty wrapper around the type,
+given that we can't specify constructor template types.
+
+---
+
+Custom vtable
+
+```cpp
+invoke_ptr{ static_cast<invoke_ptr_t>(
+  [](storage_ptr_t storage_ptr, Args&&... args) -> R
+	{
+    return (*static_cast<C*>(storage_ptr))(
+      std::forward<Args>(args)...
+    );
+  }
+)},
 ```
 
 Note:
 - Initialize `invoke_ptr`
+- `storage_ptr_t` is `void*`
+- Create function pointer from lambda,
+that takes a pointer to the type erased storage object,
+and casts it to our closure type.
 - Closure type is available in the constructor
 
 ---
 
-### Custom vtable
+Custom vtable
 
 ```cpp
 copy_ptr{ static_cast<copy_ptr_t>(
   [](storage_ptr_t dst_ptr, storage_ptr_t src_ptr) -> void
   {
-    new (dst_ptr) C{ (*reinterpret_cast<C*>(src_ptr)) };
+    new (dst_ptr) C{ (*static_cast<C*>(src_ptr)) };
   }
 )},
 ```
@@ -820,13 +880,13 @@ Note:
 
 ---
 
-### Custom vtable
+Custom vtable
 
 ```cpp
 destructor_ptr{ static_cast<destructor_ptr_t>(
-	[](storage_ptr_t storage_ptr) noexcept -> void
-	{
-    reinterpret_cast<C*>(storage_ptr)->~C();
+  [](storage_ptr_t storage_ptr) noexcept -> void
+  {
+    static_cast<C*>(storage_ptr)->~C();
   }
 )},
 size{sizeof(C)}
@@ -839,7 +899,7 @@ Note:
 
 ---
 
-### Dynamic Closure Storage
+Dynamic Closure Storage
 
 ```cpp
 private:
@@ -852,7 +912,7 @@ Note:
 
 ---
 
-### Dynamic Closure Storage
+Dynamic Closure Storage
 
 ```cpp
 template<
@@ -878,7 +938,7 @@ Note:
 
 ---
 
-### Dynamic Closure Storage
+Dynamic Closure Storage
 
 ```cpp
 ~function()
@@ -912,7 +972,7 @@ inside the function object on the stack.
 
 ---
 
-### Inplace Closure Storage
+Inplace Closure Storage
 
 ```py
 template<typename R, typename... Args>
@@ -939,7 +999,7 @@ Note:
 
 ---
 
-### Inplace Closure Storage
+Inplace Closure Storage
 
 `std::aligned_storage`
 
@@ -961,7 +1021,7 @@ Note:
 
 ---
 
-### Inplace Closure Storage
+Inplace Closure Storage
 
 ```cpp
 {
@@ -972,7 +1032,7 @@ Note:
 
   new(&storage)int{ 3 };
 
-  std::cout << reinterpret_cast<int&>(storage);
+  std::cout << static_cast<int&>(storage);
 }
 std::cout << 6;
 ```
@@ -989,7 +1049,7 @@ Note:
 
 ---
 
-### Inplace Closure Storage
+Inplace Closure Storage
 
 ```cpp
 {
@@ -1000,7 +1060,7 @@ Note:
 
   new(&storage)int{ 3 };
 
-  std::cout << reinterpret_cast<int&>(storage);
+  std::cout << static_cast<int&>(storage);
 }
 std::cout << 6;
 ```
@@ -1012,7 +1072,7 @@ the inner scope. **5s**
 
 ---
 
-### Inplace Closure Storage
+Inplace Closure Storage
 
 ```cpp
 {
@@ -1023,7 +1083,7 @@ the inner scope. **5s**
 
   new(&storage)int{ 3 };
 
-  std::cout << reinterpret_cast<int&>(storage);
+  std::cout << static_cast<int&>(storage);
 }
 std::cout << 6;
 ```
@@ -1037,7 +1097,7 @@ we corrupted the stack
 
 ---
 
-### Inplace Closure Storage
+Inplace Closure Storage
 
 ```cpp
 new (std::addressof(storage_)) C{std::forward<C>(closure)};
@@ -1049,7 +1109,7 @@ Note:
 
 ---
 
-### Inplace Closure Storage
+Inplace Closure Storage
 
 ```cpp
 R operator() (Args... args) const
@@ -1067,17 +1127,340 @@ Note:
 
 ---
 
+Inplace Closure Storage
+
+```cpp
+~function()
+{
+  vtable_ptr_->destructor_ptr(std::addressof(storage_));
+}
+```
+
+Note:
+- Destroy the object inside `storage_`.
+- Empty `vtable` `destructor_ptr` is no op.
+- No that we don't have heap memory anymore,
+we don't need to free `storage_`.
+- Again we'll skip copy and move.
+
+---
+
+# SBO
+
+Note:
+- Small Buffer Optimization means we store the closure inplace,
+if it is small enough like we've just seen.
+- Otherwise we do heap allocation.
+- [inplace vs `std::function`](http://quick-bench.com/DYFVhe010StaXo3dMmQRKVr0VKQ)
+- Faster because less branching
+- [Price of loosing inlining](http://quick-bench.com/nfVtNp9sWilZTossqx178p336X8)
+- All this abstraction is expensive.
+- Note, here the vector reserve is an allocation, so that's part of the cost.
+- The `std::function` object should be using SBO, only storing one int.
+- Someone else comes along, and adds vec to the capture list.
+- Note, PGO can help optimize deferred calls.
+- If you can know your memory layout, please tell the compiler.
+
+---
+
+Inplace Closure Storage Size
+
+```
+static constexpr size_t size = sizeof(void(*)) * 2;
+using storage_t = std::aligned_storage_t<size>;
+```
+
+Note:
+- Make inplace size and alignment configurable,
+via non type template parameters of the class signature with defaults.
+- What should those defaults look like?
+- A function object sense if you have to store it inside a container.
+- So increasing it's size will hurt memory usage and iteration speed.
+- The 3 most common sizes for the resulting object are 32, 48, and 64 bytes,
+in line with common x86 cache line size.
+
+---
+
+### Future
+
+```cpp
+stdext::inplace_function<
+  signature,
+  size = default,
+  alignment = default
+>
+```
+<!-- .element: class="fragment" -->
+
+```cpp
+dyno::function<
+  signature,
+  storage_policy = default
+>
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- SG14, has a proposal for an `inplace_function`,
+that never does heap allocation.
+- Louis Dion proposes a more generic abstraction of storage policies.
+- SBO and inplace are part of this bigger set.
+- If you want to learn more, watch his CppCon talk from this year.
+
+---
+
+### Variant Closure Storage
+
+* Avoid unused space or heap allocation
+<!-- .element: class="fragment" -->
+
+* Potentially perfect in-lining
+<!-- .element: class="fragment" -->
+
+Note:
+- Via reflection or another mechanism,
+we accumulate all the types our function object is being instantiate with.
+- Then store the closure inside a variant like.
+- We know what kind of layout our object can have.
+- Just not which one it is at run time.
+- Only use as much space as we need.
+- No heap allocation.
+- The `static_cast` isn't hidden behind a function pointer.
+- The compiler can inline it like any regular function call.
+
+---
+
+Closure Types
+
+```cpp
+struct trivial_closure_a
+{
+  int arg;
+
+  trivial_closure_a(const int a) noexcept : arg(a) {}
+
+  int operator() () const noexcept
+  {
+    return foo(arg);
+  }
+};
+```
+
+Note:
+- Let's assume this is the first type our user instantiates `function` with.
+
+---
+
+Closure Types
+
+```cpp
+struct complex_closure
+{
+  std::vector<int> vec;
+
+  complex_closure(std::vector<int> arg) :
+    vec{std::move(arg)}
+  {}
+
+  int operator() () const noexcept
+  {
+    return foo(vec.back());
+  }
+};
+```
+
+Note:
+- Second type our user instantiates `function` with.
+
+---
+
+Closure Types
+
+```cpp
+struct trivial_closure_b
+{
+  int arg_a;
+  int arg_b;
+
+  trivial_closure_b(const int a, const int b) noexcept :
+    arg_a{a}, arg_b{b}
+  {}
+
+  int operator() () const noexcept
+  {
+    return foo(arg_a + arg_b);
+  }
+};
+```
+
+Note:
+- Third type our user instantiates `function` with.
+- Very similar to our first type.
+
+---
+
+Variant Closure Storage
+
+```cpp
+function() noexcept : index_{3} {}
+```
+
+```cpp
+function(trivial_closure_a closure) noexcept : index_{0}
+{
+  new (std::addressof(storage_)) trivial_closure_a{closure};
+}
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- We keep track of the which type is currently active via an index variable.
+- Empty construction, setting the index to one above the last viable index.
+- We have 3 types, so 0, 1, and 2 are used.
+- Now that we know each used type we can generate a matching constructor.
+- I'll skip perfect forwarding.
+
+---
+
+Variant Closure Storage
+
+```cpp
+function(complex_closure closure) : index_{1}
+{
+  new (std::addressof(storage_)) complex_closure{
+    std::move(closure)
+  };
+}
+
+function(trivial_closure_b closure) noexcept : index_{2}
+{
+  new (std::addressof(storage_)) trivial_closure_b{closure};
+}
+```
+
+Note:
+- The constructors for type 2 and 3 are very similar.
+
+---
+
+Variant Closure Storage
+
+```cpp
+R operator() (Args... args) const
+{
+  switch(index_)
+  {
+    case 0: return (*static_cast<trivial_closure_a*>(
+      static_cast<void*>(std::addressof(storage_))
+    ))(std::forward<Args>(args)...);
+    [...]
+    default: throw std::bad_function_call();
+  }
+}
+```
+
+Note:
+- When invoking our closure, we switch based on the index,
+cast the `storage_` object to the according type and call it.
+- The only indirection is the switch.
+- Inlining should be very transparent to the optimizer.
+
+---
+
+Variant Closure Storage
+
+```cpp
+~function()
+{
+  switch(index_)
+  {
+    case 1:
+      static_cast<complex_closure*>(
+        static_cast<void*>(std::addressof(storage_))
+      )->~complex_closure();
+      break;
+    default: break; // trivial no-op
+  }
+}
+```
+
+Note:
+- In the destructor we can make use of the fact that type 1 and 3 are
+trivially destructible. So we don't need to do anything.
+- Should the stored object be the `complex_closure` we call it's destructor.
+- Again we'll skip explaining the copy and move.
+- [Benchmark](http://quick-bench.com/RcG3GqFEDjjW7BLoGiHV6hP9q2s)
+- What could possible suffer with this approach?
+- Growing the type set might trash instruction cash.
+
+---
+
+Move Only Closure
+
+```cpp
+del_t del_a = rand_bool
+  ? copy_move_closure{}
+  : move_only_closure{};
+
+del_t del_b = del_a; // can we copy?
+```
+<!-- .element: class="fragment" -->
+
+Note:
+- Some people are curious as to why we can't construct `std::function`,
+with a move only type.
+- Consider this example.
+- We would have to make decisions at compile time, about run time properties.
+- I see 2 possible solutions,
+if you *really* want to build `function` objects with move only types.
+- You could either make a move only `function`, or have a throwing copy. >>
+
+---
+
+### Lessons Learned
+
+* Free functions -> `template<typename F>`
+<!-- .element: class="fragment" -->
+
+* [`std::function`]() is an opaque abstraction!
+<!-- .element: class="fragment" -->
+
+* The price of *magic* is runtime!
+<!-- .element: class="fragment" -->
+
+Note:
+- Lessons Learned >>
+- If it's a free function,
+using templates is basically always a better option. >>
+- Note how I always say can, not will. Using run time polymorphism,
+will make your performance much less predictable.
+- Remember the earlier example, someone adds a single value to a capture,
+and suddenly we are doing recursive allocation.
+- `std::function` is an opaque abstraction
+- Personally, I try to avoid `std::function` whenever possible.
+- I think it is a bad abstraction most of the time.
+- It only make sense in very specific library level use cases.
+- Function signature issue, usually over constraining. >>
+- The price of *magic* is runtime.
+- Interfaces that try to guess what the user wants are fundamentally doomed.
+
+---
+
 When should you use [`std::function`]()?
 
 * Has to be stored inside a container
 <!-- .element: class="fragment" -->
+
 * You really can't know the layout at compile time
 <!-- .element: class="fragment" -->
-* You really can't know the layout at compile time
+
+* You **really** can't know the layout at compile time
 <!-- .element: class="fragment" -->
-* All your closure types are move and copyable
+
+* **All** your closure types are move and copyable
 <!-- .element: class="fragment" -->
-* Constrain the user to exactly one signature
+
+* Constrain the user to exactly **one** signature
 <!-- .element: class="fragment" -->
 
 
@@ -1086,45 +1469,36 @@ Note:
 
 ---
 
-sg14 inplace_function
-How big to choose inline size.
-Store vtable pointer ala `dyno::function`
-[Price of loosing inlining](http://quick-bench.com/cDenhM9zX6NFQbdUXJQV2FfmtuY)
-Note, here the vector reserve is an allocation, so that's part of the cost.
-The `std::function` object should be using sbo, only storing one int.
-Someone else comes along, and adds vec to the capture list.
-Note, PGO can help optimize deferred calls.
+### Source
+
+https://github.com/Voultapher/Presentations
+
+Note:
+- You'll find the source for both the presentation and examples here.
 
 ---
 
-If it's a free function, using templates is basically always a better option.
+### Contact
 
+* Email: lukas.bergdoll@gmail.com
 
+* GitHub: https://github.com/Voultapher
 
+Note:
+- If you are watching this video, and you want to tell me how wrong I was.
+- Here you go.
 
-I won't show you any benchmarks in this talk. Benchmarks, especially about
-this topic can be misleading.
-Implementation can limit inlining.
-Implementation can cause heap allocation.
-Alternate implementations, like inline storage can make iteration worse.
-Perfect switch case reinterpret_cast trash instruction cash.
+---
 
-Note how I always say can, not will. Using run time polymorphism,
-will make your performance much less predictable.
+## Thanks
 
-Point to Louis' talk to learn more about alternate implementations.
+Note:
+- Thanks for listening.
 
-Realize what you are opting into!
+---
 
-Coroutine move only function
+# Q&A
 
-Personally, I try to avoid `std::function` whenever possible.
-I think it is a bad abstraction most of the time.
-It only make sense in very specific library level use cases.
-
-Function signature issue, usually over constraining.
-
-Opaque abstraction
-
-[inplace vs `std::function`](http://quick-bench.com/VU7NZGtfLziTGzMPporm-P8qYcI)
-[inplace vs `stdext::inplace_function`](http://quick-bench.com/Ls_1HAmdg1TyXRU-GE-BMKy17l4)
+Note:
+- Any remaining questions?
+- [inplace vs `stdext::inplace_function`](http://quick-bench.com/Ls_1HAmdg1TyXRU-GE-BMKy17l4)
