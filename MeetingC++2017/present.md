@@ -37,10 +37,10 @@ Note:
 <!-- .element: class="fragment" -->
 
 Note:
-- First we'll try to understand what the problem is.
+- First we'll try to understand what the problem is. >>
 - Then we'll try to implement `std::function`,
-to understand the root of those problems.
-- And finally we'll explore alternatives.
+to understand the root of those problems. >>
+- And finally we'll explore alternatives. >>
 
 ---
 
@@ -86,9 +86,9 @@ Note:
 - `std::function` more constrained
 - [Benchmark how much slower?]
 (http://quick-bench.com/v0VC_hCf4naIfmjdv5PEpEqP-KQ)
-- Change auto to int
+- More than 20x slower, why?
 - Note we over constrain so the user has to specify to function type.
-- Function can't be used in constexpr context anymore.
+- `std::max` can't be used in constexpr context anymore.
 
 ---
 
@@ -219,6 +219,8 @@ Note:
 - We don't know, it's implementation defined. >>
 - How about now?
 - We still don't know, it's implementation defined. >>
+- Extra: function pointer is guaranteed SBO, lambda can be casted to,
+not sure if applies.
 - Here?
 - We really can't know here. Depends on the caller. >>
 
@@ -620,6 +622,15 @@ int(*f)(int) = pure;
 ```
 <!-- .element: class="fragment" -->
 
+Note:
+- Pure lambdas not really pure
+- Compiler can resolve the address of val at compile time.
+- Now we can do.
+
+---
+
+Implicit Lambda Capture
+
 ```
 const int val = 4;
 auto pure = [](int arg)
@@ -628,17 +639,16 @@ auto pure = [](int arg)
 };
 std::cout << pure(-1);
 ```
-<!-- .element: class="fragment" -->
 
 Note:
-- Pure lambdas not really pure
-- Compiler can resolve the address of val at compile time.
-- Now we can do.
 - Something curious I found out just recently.
 - Which Error?
-- Nope, odr usage. Standard 7.2.
-- With that we can add a new constructor to our `function` class.
+- Valid C++11
+- Cppreference: "A variable can be used without being captured if it does not have automatic storage duration (i.e. it is not a local variable or it is static or thread local) or if it is not odr-used in the body of the lambda."
+- Standard 6.2.3: "A variable x whose name appears as a potentially-evaluated expression ex is odr-used by ex unless applying the
+lvalue-to-rvalue conversion (7.1) to x yields a constant expression ..."
 - Types are also visible inside a lambda.
+- With that we can add a new constructor to our `function` class.
 
 ---
 
@@ -649,7 +659,7 @@ static T cap{ std::forward<T>(closure) };
 
 invoke_ptr_ = static_cast<invoke_ptr_t>([](Args... args) -> R
 {
-  return cap(std::forward<Args>(args)...);
+  return capture(std::forward<Args>(args)...);
 });
 ```
 
@@ -665,7 +675,7 @@ Note:
 Argument Type Forwarding
 
 ```cpp
-static T cap{ std::forward<T>(closure) };
+static T capture{ std::forward<T>(closure) };
 
 invoke_ptr_ = static_cast<invoke_ptr_t>([](Args&&... args) -> R
 {
@@ -693,7 +703,7 @@ std::cout << vec.back()();
 <!-- .element: class="fragment" -->
 
 ```cpp
-static T cap{ std::forward<T>(closure) };
+static T capture{ std::forward<T>(closure) };
 ```
 <!-- .element: class="fragment" -->
 Note:
@@ -701,7 +711,7 @@ Note:
 - You guessed it, it pirnts 0.
 - Although each lambda has a unique type, here there is only **ONE**
 lambda, which means that, >>
-- cap gets created only once.
+- `capture` gets created only once.
 - The first time this constructor is called.
 ---
 
@@ -745,13 +755,13 @@ Note:
 
 Note:
 - Before we try figuring out how to store the closure object,
-we have to understand the conceptual memory time line.
-- Class level: here we decide the memory layout.
+we have to understand the conceptual memory time line. >>
+- Class level: here we decide the memory layout. >>
 - Constructor level: here we decide how the memory layout is initialized.
 Note this still happens at compile time, however the constructor can
 no longer change the memory layout.
 - The memory layout is strongest way for the compiler to reason about
-your program, with that comes the biggest optimization potential.
+your program, with that comes the biggest optimization potential. >>
 - Run time: here we potentially mutate the memory.
 
 ---
@@ -796,8 +806,8 @@ template<typename R, typename... Args> struct vtable
   using storage_ptr_t = void*;
 
   using invoke_ptr_t = R(*)(storage_ptr_t, Args&&...);
-	using copy_ptr_t = void(*)(storage_ptr_t, storage_ptr_t);
-	using destructor_ptr_t = void(*)(storage_ptr_t);
+  using copy_ptr_t = void(*)(storage_ptr_t, storage_ptr_t);
+  using destructor_ptr_t = void(*)(storage_ptr_t);
 
   [...]
 }
@@ -835,7 +845,7 @@ explicit constexpr vtable(wrapper<C>) noexcept :
 Note:
 - Constructor signature
 - We only care about the closure type, not the object itself.
-- `wrapper<C>` is an empty wrapper around the type,
+- `wrapper<C>` is an empty `struct` around the type,
 given that we can't specify constructor template types.
 
 ---
@@ -908,7 +918,9 @@ private:
 ```
 
 Note:
-- Before constructor class layout
+- `function` class layout
+- Pointer to vtable
+- and `mutable` `storage_ptr_`, remember, call operator has to be const.
 
 ---
 
@@ -933,7 +945,8 @@ Note:
 - `vtable_ptr` as link to the `vtable`
 - We don't know the size of the closure at type layout.
 - So we have to store it on the heap.
-- Again placement new;
+- That means calling `malloc` with a certain size.
+- Again placement new.
 - Note that we have to decay the closure parameter type.
 
 ---
@@ -969,6 +982,9 @@ Note:
 - At the type layout stage
 - Piece of memory to store small objects,
 inside the function object on the stack.
+- The `int` we capture was small enough,
+so `std::function` didn't need to do heap allocation.
+- `std::function` and `std::string` do this.
 
 ---
 
@@ -1067,7 +1083,7 @@ std::cout << 6;
 
 Note:
 - Yes it prints 3, and then it corrupts the stack trying to leave
-the inner scope. **5s**
+the inner scope.
 - Who can spot the bug? >>
 
 ---
@@ -1090,10 +1106,10 @@ std::cout << 6;
 
 
 Note:
-- We forgot a ::type at the end of aligned_storage. **2s**
+- We forgot a ::type at the end of aligned_storage.
 - Trust me you don't want to debug, that.
 - By writing into storage, which essentially was an empty struct,
-we corrupted the stack
+we corrupted the stack.
 
 ---
 
@@ -1123,7 +1139,7 @@ R operator() (Args... args) const
 
 Note:
 - Call operator
-- Replace `storage_ptr` with the address of the `storage_` object
+- Replace `storage_ptr` with the address of the `storage` object
 
 ---
 
@@ -1137,10 +1153,10 @@ Inplace Closure Storage
 ```
 
 Note:
-- Destroy the object inside `storage_`.
+- Destroy the object inside `storage`.
 - Empty `vtable` `destructor_ptr` is no op.
-- No that we don't have heap memory anymore,
-we don't need to free `storage_`.
+- Note, that we don't have heap memory anymore,
+we don't need to free `storage`.
 - Again we'll skip copy and move.
 
 ---
@@ -1158,6 +1174,7 @@ if it is small enough like we've just seen.
 - Note, here the vector reserve is an allocation, so that's part of the cost.
 - The `std::function` object should be using SBO, only storing one int.
 - Someone else comes along, and adds vec to the capture list.
+- 2500x more expensive.
 - Note, PGO can help optimize deferred calls.
 - If you can know your memory layout, please tell the compiler.
 
@@ -1174,7 +1191,8 @@ Note:
 - Make inplace size and alignment configurable,
 via non type template parameters of the class signature with defaults.
 - What should those defaults look like?
-- A function object sense if you have to store it inside a container.
+- A function object only makes sense,
+if you have to store it inside a container.
 - So increasing it's size will hurt memory usage and iteration speed.
 - The 3 most common sizes for the resulting object are 32, 48, and 64 bytes,
 in line with common x86 cache line size.
@@ -1201,8 +1219,9 @@ dyno::function<
 <!-- .element: class="fragment" -->
 
 Note:
+- Future >>
 - SG14, has a proposal for an `inplace_function`,
-that never does heap allocation.
+that never does heap allocation. >>
 - Louis Dion proposes a more generic abstraction of storage policies.
 - SBO and inplace are part of this bigger set.
 - If you want to learn more, watch his CppCon talk from this year.
@@ -1218,13 +1237,14 @@ that never does heap allocation.
 <!-- .element: class="fragment" -->
 
 Note:
+- Crazy, assume we have reflection and constexpr blocks.
 - Via reflection or another mechanism,
 we accumulate all the types our function object is being instantiate with.
 - Then store the closure inside a variant like.
 - We know what kind of layout our object can have.
-- Just not which one it is at run time.
+- Just not which one it is at run time. >>
 - Only use as much space as we need.
-- No heap allocation.
+- No heap allocation. >>
 - The `static_cast` isn't hidden behind a function pointer.
 - The compiler can inline it like any regular function call.
 
@@ -1317,7 +1337,8 @@ Note:
 - We keep track of the which type is currently active via an index variable.
 - Empty construction, setting the index to one above the last viable index.
 - We have 3 types, so 0, 1, and 2 are used.
-- Now that we know each used type we can generate a matching constructor.
+- Now that we know each used type we can generate a matching constructor. >>
+- `trivial_closure_a` first type constructor.
 - I'll skip perfect forwarding.
 
 ---
@@ -1409,7 +1430,7 @@ del_t del_b = del_a; // can we copy?
 Note:
 - Some people are curious as to why we can't construct `std::function`,
 with a move only type.
-- Consider this example.
+- Consider this example. >>
 - We would have to make decisions at compile time, about run time properties.
 - I see 2 possible solutions,
 if you *really* want to build `function` objects with move only types.
@@ -1436,7 +1457,7 @@ using templates is basically always a better option. >>
 will make your performance much less predictable.
 - Remember the earlier example, someone adds a single value to a capture,
 and suddenly we are doing recursive allocation.
-- `std::function` is an opaque abstraction
+- `std::function` is an opaque abstraction!
 - Personally, I try to avoid `std::function` whenever possible.
 - I think it is a bad abstraction most of the time.
 - It only make sense in very specific library level use cases.
