@@ -12,9 +12,9 @@ Note:
 Note:
 - Yes!
 - Let me rephrase that.
-- Is `std::function` the best it can do?
+- Is `std::function` the best **it** can do?
 - Yes!
-- Is `std::function` the best you can do? >>
+- Is `std::function` the best **you** can do? >>
 
 ---
 
@@ -22,6 +22,8 @@ Note:
 
 Note:
 - No!
+- Intro
+- If you have questions, just raise your arm.
 
 ---
 
@@ -655,7 +657,7 @@ lvalue-to-rvalue conversion (7.1) to x yields a constant expression ..."
 Static Closure Storage
 
 ```cpp
-static T cap{ std::forward<T>(closure) };
+static T capture{ std::forward<T>(closure) };
 
 invoke_ptr_ = static_cast<invoke_ptr_t>([](Args... args) -> R
 {
