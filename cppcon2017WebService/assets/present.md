@@ -6,7 +6,7 @@ Note:
 - Today we'll try to understand where C++, fits into a modern web service.
 - How did C++ never find widespread adoption in the networking segment?
 A marked dominated by C.
-Both Nodejs and python essentially implement their networking with C.
+Just to name a few, nginx, uwsgi, apache, the linux kernel.
 - Network applications being prone to malicious input,
 makes this particularly ironic, given C' security track record.
 - The vast majority of recent security breaches,
@@ -21,10 +21,12 @@ surely this translates to applications?
 
 ### Roadmap
 
-* Where
+* Target
 <!-- .element: class="fragment" -->
+
 * Client
 <!-- .element: class="fragment" -->
+
 * Server
 <!-- .element: class="fragment" -->
 
@@ -40,6 +42,7 @@ merely my subjective observations. >>
 ---
 
 Serve static Webpage
+
 ```py
 import SimpleHTTPServer
 import SocketServer
@@ -74,6 +77,7 @@ interoperable machine-to-machine interaction over a network. >>
 
 * Minimal first use effort
 <!-- .element: class="fragment" -->
+
 * Out of the box cross platform support
 <!-- .element: class="fragment" -->
 
@@ -99,8 +103,10 @@ of modern web development. Coming from a C++ background.
 
 * Ecosystem
 <!-- .element: class="fragment" -->
+
 * Tools
 <!-- .element: class="fragment" -->
+
 * Frameworks
 <!-- .element: class="fragment" -->
 
@@ -113,8 +119,11 @@ in your code. Followed by a sane, intuitive debugging experience
 inside your browser. Is a welcome breath of fresh air, after years of
 fighting tools to achieve, seemingly simple goals.
 And all that without having installed anything special. >>
-- Frameworks: React, Angular, you name it. These days there a so many,
-that sites like todomvc exist. >>
+- Frameworks: React, Angular, you name it. These days there a so many >>
+
+---
+
+![alt text](assets/history-of-web-frameworks-timeline.png)
 
 ---
 
@@ -122,6 +131,7 @@ that sites like todomvc exist. >>
 
 * Javascript (still)
 <!-- .element: class="fragment" -->
+
 * Browser support
 <!-- .element: class="fragment" -->
 
@@ -141,10 +151,13 @@ WebAssembly gets DOM bindings. >>
 
 1. Edit .jsx .scss .tx ...
 <!-- .element: class="fragment" -->
+
 2. Compile to ECMAScript version X and plain css
 <!-- .element: class="fragment" -->
+
 3. Uglify
 <!-- .element: class="fragment" -->
+
 4. Bundle
 <!-- .element: class="fragment" -->
 
@@ -193,6 +206,7 @@ This can help to drastically reduce average bandwidth usage.
 
 * Persistence
 <!-- .element: class="fragment" -->
+
 * Bidirectional communication
 <!-- .element: class="fragment" -->
 
@@ -238,10 +252,12 @@ introduced by HTML5. >>
 
 ### 3 Libraries
 
-* Beast
+* BeastWhere
 <!-- .element: class="fragment" -->
+
 * uWebSockets
 <!-- .element: class="fragment" -->
+
 * IncludeOS
 <!-- .element: class="fragment" -->
 
@@ -262,8 +278,10 @@ I want to compare 3 popular open source choices. >>
 
 * request handler
 <!-- .element: class="fragment" -->
+
 * send
 <!-- .element: class="fragment" -->
+
 * broadcast
 <!-- .element: class="fragment" -->
 
@@ -309,14 +327,12 @@ Note:
 ### Request Handler
 
 ```cpp
-h.onMessage([&h, &poll_data]( //) md fix
+h.onMessage([&h, &poll_data]( //)
   uWS::WebSocket<uWS::SERVER>* ws,
   char* message,
   size_t length,
   uWS::OpCode
-) {
-
-}
+)
 ```
 
 Note:
@@ -482,6 +498,7 @@ In our case we want to broadcast the updated vote array.
 
 * WebSocket support
 <!-- .element: class="fragment" -->
+
 * FlatBuffers support
 <!-- .element: class="fragment" -->
 
@@ -550,11 +567,11 @@ Note:
 
 ---
 
-## Js Wut?
+## JS
 
 Note:
 
-- Join me on a short expedition to the land of Js Wut. >>
+- Join me on a short expedition to the land of Javascript. >>
 
 ---
 
@@ -567,18 +584,22 @@ const options = [1, 10, 21, 2].sort();
 [1, 10, 2, 21]
 ```
 <!-- .element: class="fragment" -->
+
 ```js
 const options = [1, 10, 21, 2].sort((a, b) => a < b);
 ```
 <!-- .element: class="fragment" -->
+
 ```js
 [1, 10, 2, 21] or [1, 2, 10, 21]
 ```
 <!-- .element: class="fragment" -->
+
 ```js
 const options = [1, 10, 21, 2].sort((a, b) => a - b);
 ```
 <!-- .element: class="fragment" -->
+
 ```js
 [1, 2, 10, 21]
 ```
@@ -615,6 +636,37 @@ Note:
 - Let's find out!
 - Obviously the string `"itsfine"`
 - Turns out you can express the entirety of Javascript with just 6 symbols. >>
+
+---
+
+### Comparisons
+
+```js
+null > 0;
+```
+<!-- .element: class="fragment" -->
+
+`false`
+<!-- .element: class="fragment" -->
+
+```js
+null == 0;
+```
+<!-- .element: class="fragment" -->
+
+`false`
+<!-- .element: class="fragment" -->
+
+```js
+null >= 0;
+```
+<!-- .element: class="fragment" -->
+
+`true`
+<!-- .element: class="fragment" -->
+
+Note:
+- And finally, the joy that is having distinct null and 0.
 
 ---
 
@@ -1244,8 +1296,10 @@ saving both bandwidth and local resources. >>
 
 * uWebSockets | ~1.6kb
 <!-- .element: class="fragment" -->
+
 * IncludeOS | ~3kb
 <!-- .element: class="fragment" -->
+
 * Beast | ~9kb
 <!-- .element: class="fragment" -->
 
@@ -1262,15 +1316,17 @@ I ran our example implementations through wordcount. >>
 
 * uWebSockets | Debug: 1.4s | Release: 1.8s
 <!-- .element: class="fragment" -->
+
 * IncludeOS | Default: 2.9s
 <!-- .element: class="fragment" -->
+
 * Beast | Debug: 8.5s | Release: 17.1s
 <!-- .element: class="fragment" -->
 
 Note:
 - Let us now compare a big productivity factor, their incremental compile time.
 - Note, the results are the 90 percentile compiled with clang 4. >>
-- uWebSockets is linked as dynamic library, making it a breeze to work with. >>
+- uWebSockets is linked as static library, making it a breeze to work with. >>
 - I couldn't get IncludeOS to build as Debug,
 so I measured the default settings. With 90 percent being under 3 seconds,
 still nice to quickly iterate with. >>
@@ -1350,6 +1406,7 @@ Note:
 ### Memory Usage | User Space
 
 * uWebSockets: 4.6mb
+
 * Beast: 4.2mb
 
 Note:
@@ -1361,6 +1418,7 @@ Note:
 ### Connections per ms
 
 * uWebSockets: 7.1
+
 * Beast: 5.3
 
 Note:
@@ -1379,6 +1437,7 @@ Note:
 ### Memory Usage | User Space
 
 * uWebSockets: 6.4mb
+
 * Beast: 49.3mb
 
 Note:
@@ -1394,6 +1453,7 @@ with less RAM than your phone has.
 ### Connections per ms
 
 * uWebSockets: 35.0
+
 * Beast: 26.4
 
 Note:
@@ -1426,8 +1486,10 @@ Note:
 
 * Easy | uWebSockets
 <!-- .element: class="fragment" -->
+
 * Secure | IncludeOS
 <!-- .element: class="fragment" -->
+
 * Modular | Beast
 <!-- .element: class="fragment" -->
 
@@ -1477,8 +1539,10 @@ compiled down to efficient low level components.
 
 * [Networking Ts](http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/n4656.pdf)
 <!-- .element: class="fragment" -->
+
 * [Executor Ts](http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/p0443r1.html)
 <!-- .element: class="fragment" -->
+
 * [Coroutine Ts](http://open-std.org/JTC1/SC22/WG21/docs/papers/2017/n4649.pdf)
 <!-- .element: class="fragment" -->
 
@@ -1517,6 +1581,10 @@ Note:
 ---
 
 ## Vote Result
+
+---
+
+## Thanks
 
 ---
 

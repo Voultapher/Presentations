@@ -1,5 +1,3 @@
 #!/usr/bin/env bash
 
-FILES='paraiso-dark.css present.md index.html update.sh'
-
-cp $FILES ../
+cp -r assets style index.html update.sh ../
