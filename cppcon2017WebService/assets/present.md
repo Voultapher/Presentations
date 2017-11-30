@@ -1,5 +1,6 @@
 # Web | C++
 
+
 Note:
 - Web and C++, are not an iconic couple.
 - My name is Lukas, and I work as Full Stack software engineer at PPRO.
@@ -375,7 +376,8 @@ faster and less memory hungry.
 
 ```cpp
 const auto ok = flatbuffers::Verifier(
-  reinterpret_cast<const uint8_t*>(message), length
+  message,
+  length
 ).VerifyBuffer<Strawpoll::Request>(nullptr);
 ```
 
@@ -526,7 +528,10 @@ setupWebSocketCommunication() {
   this.socket.addEventListener('message',
     this.handleServerResponse
   );
-  this.socket.addEventListener('close', this.handleDisconnect);
+  this.socket.addEventListener(
+    'close',
+    this.handleDisconnect
+  );
 }
 ```
 
@@ -556,7 +561,7 @@ switch(response.type()) {
     console.error("Error: ", response.error());
     break;
   default:
-    console.error("Invalid response type: ", response.type());
+    console.error("Invalid response type");
 };
 ```
 
@@ -1172,6 +1177,16 @@ void after_write(
 }
 ```
 
+Note:
+- First it releases our conceptual lock, and then calls `on_write`.
+- Which depending on the queue size, calls either `flush_message_queue` again,
+or `do_read`.
+- Similar story for reading. >>
+
+---
+
+### Event Chain Integrity
+
 ```cpp
 void do_read()
 {
@@ -1182,13 +1197,8 @@ void do_read()
   read_in_process_ = true;
 }
 ```
-<!-- .element: class="fragment" -->
 
 Note:
-- First it releases our conceptual lock, and then calls `on_write`.
-- Which depending on the queue size, calls either `flush_message_queue` again,
-or `do_read`.
-- Similar story for reading. >>
 - I abbreviated the `async_read` call, conceptually `after_read` is the same
 as `after_write`.
 - For this model to work, its imperative,
@@ -1204,7 +1214,6 @@ it should always unfold to the overall session event loop. >>
 ### Exit
 
 ```cpp
-
 void on_read(
   boost::system::error_code ec,
   size_t bytes_transferred

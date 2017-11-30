@@ -20,7 +20,7 @@ body {
 
 .reveal {
   font-family: Ubuntu, "sans-serif";
-  font-size: 40px;
+  font-size: 6vmin;
   font-weight: normal;
   color: #eee;
 }
@@ -187,7 +187,7 @@ body {
 }
 
 .reveal code {
-  font-family: monospace;
+  font-family: "Fira Mono", monospace;
 }
 
 .reveal pre code {
@@ -195,10 +195,9 @@ body {
   padding: 5px;
   overflow: auto;
   word-wrap: normal;
-  max-height: 600px;
-  font-size: 1.3em;
-  line-height: 1.3em;
-  font-family: "Fira Mono", monospace;
+  max-height: 44vw;
+  font-size: 2.2vw;
+  line-height: 2.8vw;
 }
 
 .reveal table {
