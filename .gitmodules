@@ -1,13 +1,13 @@
 [submodule "cppcon2017WebService/reveal.js"]
-	path = cppcon2017WebService/reveal.js
+	path = cppcon-2017-web-service/reveal.js
 	url = https://github.com/hakimel/reveal.js.git
 	ignore = dirty
 [submodule "cppcon2017WebService/example/server/uWebSockets/lib/uWebSockets"]
-	path = cppcon2017WebService/example/server/uWebSockets/lib/uWebSockets
+	path = cppcon-2017-web-service/example/server/uWebSockets/lib/uWebSockets
 	url = https://github.com/uNetworking/uWebSockets.git
 [submodule "cppcon2017WebService/example/server/beast/lib/beast"]
-	path = cppcon2017WebService/example/server/beast/lib/beast
+	path = cppcon-2017-web-service/example/server/beast/lib/beast
 	url = https://github.com/boostorg/beast.git
 [submodule "MeetingC++2017/reveal.js"]
-	path = MeetingC++2017/reveal.js
+	path = meeting-cpp-2017/reveal.js
 	url = https://github.com/hakimel/reveal.js.git
