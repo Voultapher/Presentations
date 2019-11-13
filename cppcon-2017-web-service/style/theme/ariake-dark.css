@@ -9,7 +9,9 @@
  * For other themes, change $codeBackground accordingly.
  *
  */
-@import url(https://fonts.googleapis.com/css?family=Ubuntu:300,700,300italic,700italic);
+
+/*Enable this is you don't have the fonts locally.*/
+/* @import url(https://fonts.googleapis.com/css?family=Fira:300,700,300italic,700italic); */
 /*********************************************
  * GLOBAL STYLES
  *********************************************/
@@ -19,7 +21,7 @@ body {
 }
 
 .reveal {
-  font-family: Ubuntu, "sans-serif";
+  font-family: Fira Sans, "sans-serif";
   font-size: 6vmin;
   font-weight: normal;
   color: #eee;
@@ -27,13 +29,13 @@ body {
 
 ::selection {
   color: #fff;
-  background: #a23;
+  background: hsl(282, 82%, 80%);
   text-shadow: none;
 }
 
 ::-moz-selection {
   color: #fff;
-  background: #a23;
+  background: hsl(282, 82%, 80%);
   text-shadow: none;
 }
 
@@ -54,7 +56,7 @@ body {
 .reveal h6 {
   margin: 0 0 20px 0;
   color: #eee;
-  font-family: Ubuntu, "sans-serif";
+  font-family: Fira Sans, "sans-serif";
   font-weight: normal;
   line-height: 1.2;
   letter-spacing: normal;
