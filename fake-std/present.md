@@ -173,7 +173,7 @@ This is from C++'s garbage collection module. Now I know what you are thinking, 
 <!-- .element: class="fragment" -->
 
 Note:
-Of course once you have a gc, you also need to know exactly how safe your pointers are, because after all, C++ always let's you choose how correct, oops Freudian slip, I meant how safe, your program should be.
+Of course once you have a gc, you also need to know exactly how safe your pointers are, because after all, C++ always let's you choose how correct, ehmm, I meant how safe, your program should be.
 
 ---
 
@@ -216,7 +216,7 @@ And while it does use the `money_get` facet of `locale` this one is part of `iom
 Note:
 If you look at it closely and imagine a 'how' in there, you can guess what it does. This function tells you how many characters it guess there are left in the input stream.
 
-Also I found this found this wonderful picture about how 'basic' streams buffers work in C++. Note how it also features or good old friend `codecvt` from locale. The string theory people could really learn something from the C++ committee.
+Also I found this found this wonderful picture about how 'basic' streams buffers work in C++. Note how it also features our good old friend `codecvt` from `locale`. The string theory people could really learn something from the C++ committee.
 
 ---
 
