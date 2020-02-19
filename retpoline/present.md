@@ -44,7 +44,7 @@ Note:
 
 ---
 
-https://godbolt.org/z/XwvDnC
+https://godbolt.org/z/RVTfSS
 
 ---
 
@@ -234,11 +234,11 @@ cycle 12
 
 ---
 
-IF = Instruction Fetch,
-ID = Instruction Decode
-EX = Execute
-MEM = Memory access
-WB = Register write back
+- IF = Instruction Fetch,
+- ID = Instruction Decode
+- EX = Execute
+- MEM = Memory access
+- WB = Register write back
 
 Note:
 - single instruction more complex
@@ -396,7 +396,7 @@ Note:
 
 ---
 
-https://godbolt.org/z/PQdobq
+https://godbolt.org/z/N-kEji
 
 Note:
 - runtime condition
@@ -613,7 +613,7 @@ Note:
 
 ---
 
-https://godbolt.org/z/DemYRJ
+https://godbolt.org/z/KeSdKw
 
 Note:
 - another pointer as function parameter
@@ -659,6 +659,8 @@ cycle 2
    [...]
 ```
 
+---
+
 cycle 5
 
 ```x86asm
@@ -697,7 +699,7 @@ cycle ?
 ```
 
 Note:
-- again speculate not null
+- what cycle
 
 ---
 
@@ -810,49 +812,64 @@ Note:
 
 Melting latency with speculative instruction parallelism
 
+---
+
+no speculation no superscalar
+
 ```
-no speculation no parallel
 c         11 14        24 27
 o <--load--><b><--load--><b>
 ```
 
+Note:
 - total 26 cycles
 
+---
+
+speculation no superscalar
+
 ```
-speculation no parallel
 c  2       11  14
 ro *<b>      *<b>
 so <--load--><--load-->
 ```
 
+Note:
 - second speculative load stalled by first
 - wait until first load done
 - total 20 cycles
 
+---
+
+speculation and superscalar
+
 ```
-speculation parallel
 c   2  56  9
 ro  *<b>*<b>
 so1 <--load-->
 so2     <--load-->
 ```
 
+Note:
 - speculate in parallel
 - total 14 cycles
 
 ---
 
-Missing cache both times
+Missing cache both times:
 
-- no speculation no parallel 286 cycles total
+- no speculation no superscalar 286 cycles total
+<!-- .element: class="fragment" -->
 
-- speculation parallel 144 cycles total
+- speculation and superscalar 144 cycles total
+<!-- .element: class="fragment" -->
 
+Note:
 - important with bigger latency windows
 
 ---
 
-https://godbolt.org/z/xL8rqb
+https://godbolt.org/z/uYZGWf
 
 Note:
 - instruction level parallelism useful for more than loading in parallel
@@ -874,8 +891,9 @@ Note:
 
 ---
 
+no superscalar
+
 ```
-no parallel
 c     6   11   16
 o <mul><mul><mul>so
 ```
@@ -883,8 +901,11 @@ o <mul><mul><mul>so
 Note:
 - total 18 cycles
 
+---
+
+superscalar
+
 ```
-parallel
 c      6
 o1 <mul>so
 o2 <mul>
@@ -975,6 +996,7 @@ ret
                                |  relative location
                            short jump
 ```
+<!-- .element: class="fragment" -->
 
 Note:
 - maps to this binary representation
@@ -1059,7 +1081,7 @@ Note:
 
 ---
 
-https://godbolt.org/z/ufCikQ
+https://godbolt.org/z/CajGm8
 
 Note:
 - first talk about unconditional jumps
@@ -1278,12 +1300,16 @@ Note:
 - 2 axis
 - branch conditional?
 - target fixed?
+
 - unconditional branch fixed target
 - goto, break, continue, etc
+
 - conditional branch fixed target
 - if, logical operators, etc
+
 - unconditional branch variable target
 - function pointer, virtual call, jump table switch, etc
+
 - conditional branch variable target
 - if + functin pointer, etc
 
@@ -1499,6 +1525,7 @@ jmp     rdi
 cmp     eax, 38
 je      rdi
 ```
+<!-- .element: class="fragment" -->
 
 Note:
 - possible to have both
@@ -1819,7 +1846,7 @@ Note:
 Note:
 - yeah so turns out I speculated wrong
 - let me clean up
-- never retired any loads I promise
+- never retired any stores I promise
 - what about side effects
 
 ---
@@ -1913,18 +1940,29 @@ Note:
 - need to know collision target address
 - leak information from victim to attacker
 - influence branch prediction from attacker to victim
-- speculatively execute spectre v1 universal read gadget
+- speculatively execute universal read gadget
 
 ---
 
 [Stage 1]
 1. hypercall -> dump BHB
+<!-- .element: class="fragment" -->
 2. goto step 1 until address is known
+<!-- .element: class="fragment" -->
+
+Note:
+- by observing own branch prediction
+- leak BHB state of victim
+
+---
 
 [Stage 2]
 1. setup BHB for collision -> hypercall
-2. speculatively execute spectre v1 Universal Read Gadget
+<!-- .element: class="fragment" -->
+2. speculatively execute Universal Read Gadget
+<!-- .element: class="fragment" -->
 3. goto step 1 as long as you want to read arbitrary hypervisor memory
+<!-- .element: class="fragment" -->
 
 Note:
 - if can control where variable target jumps go in another program
@@ -1961,23 +1999,17 @@ Note:
 
 ---
 
-Indirect Branch Restricted Speculation
-(IBRS) prevents software running in higher
-privileged mode from using prediction results
-from software running in lower privileged
-mode.
-– Single Thread Indirect Branch Predictors
-(STIBP) prevents code executing on one logical processor from impacting the indirect
-branch prediction of code executing on another logical processor.
-– Indirect Branch Predictor Barrier (IBPB)
-stops software running before the barrier from
-affecting the indirect branch prediction of
-software running after the barrier.
+- IBRS (Indirect Branch Restricted Speculation)
+
+– STIBP (Single Thread Indirect Branch Predictors)
+
+– IBPB (Indirect Branch Predictor Barrier)
 
 Note:
 - new instructions
-- slow on current hardware
 - patched in via microcode
+- control how branch prediction results reused between security contexts
+- slow on current hardware
 - hardware not built with this in mind
 - should get better in hardware in future
 - need to be used by programmers
@@ -2085,12 +2117,12 @@ Note:
 
 Note:
 - on the graal JVM mailing list
-- Rémi Forax had this to say about the technique
+- R&eacute;mi Forax had this to say about the technique
 - doesn't even need to be JIT specifically
 
 ---
 
-https://godbolt.org/z/jRZWMs
+https://godbolt.org/z/7ivya8
 
 Note:
 - add `-mretpoline`
@@ -2136,7 +2168,7 @@ Note:
 <!-- .element: class="fragment" -->
 
 Note:
-- gcc also has think functionality
+- gcc also has this functionality
 - gcc wonderful option name
 - your up to date kernel compiles with something similar
 
@@ -2211,7 +2243,6 @@ Note:
 Note:
 - talked about spectre variant 2
 - aka Branch Target Injection
-- title of talk
 - only did threat modeling for specter v2
 - curious hole there
 
@@ -2292,6 +2323,12 @@ Note:
 - already did that 30 years ago
 - we still here
 - where we started
+- tell your CPU vendor
+- thinking about program you never wrote
+- where invariants don't hold
+- ludicrous
+- needs to be fixed in hardware
+- blaming user gonna be as effective as there
 
 ---
 
