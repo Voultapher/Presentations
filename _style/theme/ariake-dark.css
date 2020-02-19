@@ -94,8 +94,8 @@ body {
   line-height: 1.3;
   font-weight: 300;
   text-shadow: 1px 1px #222;
-  display: flex;
-  justify-content: center;
+  /* display: flex;
+  justify-content: center; */
 }
 
 /* Ensure certain elements are never larger than the slide itself */
