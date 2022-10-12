@@ -39,8 +39,8 @@ body {
   text-shadow: none;
 }
 
-.reveal .slides > section,
-.reveal .slides > section > section {
+.reveal .slides>section,
+.reveal .slides>section>section {
   line-height: 1.3;
   font-weight: inherit;
   padding: 0;
@@ -102,9 +102,11 @@ body {
 .reveal img,
 .reveal video,
 .reveal iframe {
-    margin: -20px 0;
-    max-width: 100vw;
-    height: 100vh;
+  margin: -20px 0;
+  /* max-width: 100vw; */
+  width: 100vw;
+  height: 100vh;
+  object-fit: contain;
 }
 
 .reveal strong,
@@ -286,7 +288,7 @@ body {
  *********************************************/
 .reveal section img {
   /* margin: 15px 0px; */
-  background: #eee;
+  background: #222;
 }
 
 /* .reveal section img.plain {
@@ -377,6 +379,7 @@ body {
 .reveal small code {
   vertical-align: baseline;
 }
+
 /* 
 #current-slide iframe {
     max-width: 100vw;
