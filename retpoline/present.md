@@ -1097,17 +1097,6 @@ Note:
 - simpler example
 - function pointer is an unconditional jump
 - how could we predict this
-- what if
-
----
-
-![alt text](assets/remember-the-past.jpg)
-
-Note:
-- how about
-- remember the past
-- try learn from it
-- remember last jump location
 
 ---
 
