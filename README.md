@@ -1,6 +1,5 @@
 # Presentations
 
-
 Collection of presentation sources. Created with https://github.com/hakimel/reveal.js/ based on a markdown file, called `present.md`.
 
 ## Authors
