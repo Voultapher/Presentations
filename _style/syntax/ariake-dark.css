@@ -5,7 +5,7 @@
 
 .hljs-comment,
 .hljs-quote {
-  color: hsl(228, 17%, 45%);
+  color: hsl(227.82 17% 53%);
 }
 
 .hljs-variable,
@@ -51,7 +51,7 @@
 .hljs {
   display: block;
   overflow-x: auto;
-  background: #2a2d37;
+  background: #272a31;
   color: hsl(228, 15%, 90%);
   padding: 0.5em;
 }
