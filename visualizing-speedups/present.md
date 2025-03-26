@@ -4,32 +4,76 @@ Look at my graphs.
 
 ---
 
-TODO maybe music? Change FOSS and Rust enthusiast.
+**Domain**
 
-![alt text](assets/about-me.png)
-
-<!-- **About myself**
-
-- FOSS and Rust enthusiast
-- Loves reading Sci-Fi
-- Enjoys board games and cooking
-- Terrible at whistling
-- Cannot drive cars
-- Works for MVTec Software GmbH
-
--->
-
----
-
-TODO meme, this one thing vs that other thing.
-
+- Sort implementation
+- Adaptive hybrid algorithms
+- Complex CPU micro-arch effects
 
 Note:
-- TODO
+
+- This started as an investigation into sort implementations in 2022
+- I was building a test framework and also a benchmark suite
+- Modern sort implementations are not a single algorithm
+- They are a hybrid of multiple algorithms trying to adapt to patterns in the input
+- To illuminate the different scaling effects the benchmarks measure across different dimensions
+- Modern CPUs are very complex, they contain many distributed logic blocks connected by asynchronous message queues
 
 ---
 
-TODO describe the domain and emphasize how much data this is. Especially across machines.
+**Problem space**
+
+- Input pattern 
+- Input length
+- Implementation
+- CPU prediction state
+- Test machine
+
+Note:
+
+- There are multiple dimensions in the problem space
+- Input pattern (e.g. random, zipfian, nearly sorted etc.)
+- Input length, how many elements are we sorting
+- Which implementation are we testing
+- Are CPU caches hot or cold, if so which ones, L1i, L1d, BTB etc.
+- What machine are we testing on
+
+---
+
+![alt text](assets/5d_cube.png)
+
+Note:
+
+- Solution
+- We have 5 dimensions let's just plot in 5 dimensions
+- Here is a 5D cube projected onto 2D
+
+---
+
+**Reducing the problem space**
+
+- Input pattern -> Pick diverse and representative ones
+- Input length -> Sweep in log steps up to > L3
+- Implementation -> Pick two for relative comparison
+- CPU prediction state -> Separate graphs
+- Test machine -> Separate graphs
+
+Concretely 7 * 30 * 2 = ~400 data points
+<!-- .element: class="fragment" -->
+
+Note:
+
+- By limiting the number of dimensions we look at once, we can break it down
+  into a 2D problem space
+- We can slice and dice this problem space into multiple different
+  configurations
+- I will only show a single one, but it's a good idea to experiment
+- You don't need to pick only a single combination
+- Specifically I want to compare two implementations
+- Useful for visualizing improvements and regressions
+
+- Concretely 7 input patterns, 30 input length steps and two implementations
+  give roughly 400 data points
 
 ---
 
@@ -70,7 +114,7 @@ Note:
 Note:
 - Implemented in bokeh
 - Swapped X and Y axis, effectively rotating and mirroring the graph
-- Instead of mean, one pattern has gets a line
+- Instead of mean, one pattern gets a line
 - Named axis with meaningful information
 - Transparency to signal clusters
 - Implementation improved in the meantime, most improvement
@@ -100,7 +144,6 @@ Note:
 - Switch from percent to +/- x times increase. Was quite tricky, required javascript function.
 - Point re-distribution in log-space, more even than before.
 - Os info is added to Y axis
-- Machine info now says max frequency, as the measurement data doesn't tell us current frequency.
 
 ---
 
@@ -109,10 +152,11 @@ Note:
 Note:
 - Higher render resolution
 - Each pattern gets a unique symbol to add another differentiation factor
-- X axis talks about input length instead of size now. Confusable concepts in Rust.
 - Colors are changed, to improve readability and differentiate lines that may be close to each other. Bright yellow avoided because of poor contrast.
 - Auto-zoom based on data points, instead of +/- 3x
-- Small input length not relevant here
+
+- (Rust only) X axis talks about input length instead of size now. Confusable concepts in Rust.
+
 
 ---
 
@@ -124,16 +168,55 @@ Note:
 
 ---
 
-Visual recap TODO gif?
+![alt text](assets/9_andrei_comp.png)
 
-Say where each one showed up. With date?
+Note:
+- For comparison this is the norm
+- Example, Andrei Alexandrescu writing about branchless partitioning
+- Range 1 million - 10 million, presumably to get less noisy results
+- Bars can only be differentiated by color
+- Specific color choices can be problematic for color blind people
+- Y axis is not labeled, 500 what?
+
+---
+
+![alt text](assets/10_andrei_direct_vs_plotted.png)
+
+Note:
+
+- The same data plotted into the relative speedup graph
+- Picking human friendly input sizes usually leads to over- and undersampling
+- Large parts of the input space not tested at all
+- Only a single pattern
+- A simple bar graph is better than nothing
+- But for complex adaptive algorithms they tell a very limited story
+
+---
+
+![alt text](assets/11_journey.gif)
+
+Note:
+
+- All this started as an idea on a piece of paper
+- Went through many iterations
+- Building custom visualizations helped me understand a complex design-space
+  with many tradeoffs
+- Looking back it was time well spent and I'd do it again
+- It's not the solution for all visualization problems
+- I encourage you to carefully think about the problem domain you are in and
+  what you want to benchmark at all and what kinds of data you get out of your
+  benchmark runs.
+- A good visualization, with bad data is still useless or even misleading
+- Benchmarking is **hard**
 
 ---
 
 Links:
 
-- Sort research repo https://github.com/Voultapher/sort-research-rs
+- Code repo https://github.com/Voultapher/sort-research-rs
 - Talk repo https://github.com/Voultapher/Presentations
+- Colorblind friendly palette  
+https://jfly.uni-koeln.de/color/#pallet
 
 ---
 
@@ -142,3 +225,23 @@ Thank You ❤️
 ---
 
 Questions?
+
+---
+
+Bonus
+
+---
+
+![alt text](assets/12_bonus_multi_comp_scaling.png)
+
+Note:
+- Comparison for multiple at the same time
+- Single size
+
+---
+
+![alt text](assets/13_bonus_multi_comp_single.png)
+
+Note:
+- Comparison for multiple at the same time
+- Single pattern
